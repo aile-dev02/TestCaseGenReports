@@ -1,4 +1,4 @@
-name: QA Report Generation
+name: QAレポート生成
 
 on:
   push:
@@ -24,42 +24,42 @@ concurrency:
 
 jobs:
   qa-report:
-    name: Generate QA Reports
+    name: QAレポート生成
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
     steps:
       # ── Checkout ────────────────────────────────────────
-      - name: Checkout repository
+      - name: チェックアウト
         uses: actions/checkout@v4
 
       # ── Node.js setup ───────────────────────────────────
-      - name: Set up Node.js 20
+      - name: Node.js 20環境のセットアップ
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
       # ── Dependencies ────────────────────────────────────
-      - name: Install dependencies
+      - name: 依存関係をインストール
         run: npm ci
 
       # ── Validate ────────────────────────────────────────
-      - name: Validate test cases
+      - name: テストケースをバリデーション
         run: npm run validate
 
       # ── Generate reports ────────────────────────────────
-      - name: Generate Excel report
+      - name: Excelレポートを生成
         run: npm run generate:excel
 
-      - name: Generate QA summary
+      - name: QAサマリを生成
         run: npm run generate:summary
 
-      - name: Generate traceability matrix
+      - name: トレーサビリティマトリクスを生成
         run: npm run generate:traceability
 
       # ── Summarise in GitHub Actions ──────────────────────
-      - name: Write job summary
+      - name: レポート概要をGitHub Actionsのサマリーに出力
         run: |
           echo "## QA Report Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -73,7 +73,7 @@ jobs:
           cat reports/latest/qa-summary.md >> $GITHUB_STEP_SUMMARY
 
       # ── Upload artifacts ────────────────────────────────
-      - name: Upload QA reports artifact
+      - name: QAレポートをアップロード
         uses: actions/upload-artifact@v4
         with:
           name: qa-reports-${{ github.sha }}

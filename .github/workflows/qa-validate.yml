@@ -1,4 +1,4 @@
-name: QA Validation
+name: QAバリデーション
 
 # Runs on every push that touches test cases or schemas, and on all PRs.
 # Blocks merging if any test case fails validation.
@@ -26,31 +26,31 @@ concurrency:
 
 jobs:
   validate:
-    name: Validate Test Cases
+    name: テストケースをバリデーション
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
     steps:
-      - name: Checkout repository
+      - name: リポジトリをチェックアウト
         uses: actions/checkout@v4
 
-      - name: Set up Node.js 20
+      - name: Node.js 20環境のセットアップ
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install dependencies
+      - name: 依存関係をインストール
         run: npm ci
 
-      - name: Run validator
+      - name: テストケースをバリデーション
         run: npm run validate
 
-      - name: Write validation result to summary
+      - name: 結果をサマリーに出力
         if: always()
         run: |
           if [ "${{ job.status }}" = "success" ]; then
-            echo "✅ **All test cases passed validation.**" >> $GITHUB_STEP_SUMMARY
+            echo "✅ **すべてのテストケースがバリデーションを通過しました。**" >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ **Test case validation failed. See logs above.**" >> $GITHUB_STEP_SUMMARY
+            echo "❌ **バリデーションエラーが発生しました。下部のログを確認してください。**" >> $GITHUB_STEP_SUMMARY
           fi
