@@ -10,14 +10,6 @@ dist/
 *.tsbuildinfo
 
 # ─────────────────────────────────────────────
-# Generated reports
-# reports/latest/ は CI artifact として保存するため Git 管理外。
-# 過去分をアーカイブしたい場合は reports/archive/ を手動コミットする。
-# ─────────────────────────────────────────────
-reports/latest/
-reports/archive/
-
-# ─────────────────────────────────────────────
 # Evidence (screenshots / logs) — 容量が大きいため Git LFS 推奨
 # runs/*/evidence/ を管理したい場合は LFS を設定してコメントアウト
 # ─────────────────────────────────────────────
