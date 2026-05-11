@@ -1,0 +1,30 @@
+{
+  "name": "qa-test-management",
+  "version": "1.0.0",
+  "description": "Markdown-driven QA test management system — Single Source of Truth",
+  "type": "module",
+  "scripts": {
+    "validate": "tsx scripts/validate-testcases.ts",
+    "generate:excel": "tsx scripts/generate-excel.ts",
+    "generate:summary": "tsx scripts/generate-summary.ts",
+    "generate:traceability": "tsx scripts/generate-traceability.ts",
+    "generate:all": "npm run generate:excel && npm run generate:summary && npm run generate:traceability",
+    "ci": "npm run validate && npm run generate:all"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0",
+    "gray-matter": "^4.0.3",
+    "remark": "^15.0.1",
+    "remark-parse": "^11.0.0",
+    "unified": "^11.0.4",
+    "unist-util-visit": "^5.0.0",
+    "yaml": "^2.4.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/mdast": "^4.0.3",
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}

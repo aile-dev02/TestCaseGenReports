@@ -1,2 +1,56 @@
-- name: Validate Testcases
-  run: npm run validate
+name: QA Validation
+
+# Runs on every push that touches test cases or schemas, and on all PRs.
+# Blocks merging if any test case fails validation.
+
+on:
+  push:
+    paths:
+      - 'master/testcases/**'
+      - 'master/requirements/**'
+      - 'schemas/**'
+      - 'scripts/validate-testcases.ts'
+      - 'scripts/lib/parser.ts'
+      - 'scripts/lib/loader.ts'
+      - 'scripts/lib/types.ts'
+  pull_request:
+    paths:
+      - 'master/testcases/**'
+      - 'master/requirements/**'
+      - 'schemas/**'
+      - 'scripts/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate Test Cases
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run validator
+        run: npm run validate
+
+      - name: Write validation result to summary
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ **All test cases passed validation.**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Test case validation failed. See logs above.**" >> $GITHUB_STEP_SUMMARY
+          fi

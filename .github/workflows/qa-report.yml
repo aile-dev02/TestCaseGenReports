@@ -1,0 +1,82 @@
+name: QA Report Generation
+
+on:
+  push:
+    branches:
+      - '**'
+    paths:
+      - 'master/**'
+      - 'runs/**'
+      - 'scripts/**'
+      - 'schemas/**'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Run ID (e.g. 2026-05-release). Leave blank to use latest.'
+        required: false
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qa-report:
+    name: Generate QA Reports
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      # ── Checkout ────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Node.js setup ───────────────────────────────────
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # ── Dependencies ────────────────────────────────────
+      - name: Install dependencies
+        run: npm ci
+
+      # ── Validate ────────────────────────────────────────
+      - name: Validate test cases
+        run: npm run validate
+
+      # ── Generate reports ────────────────────────────────
+      - name: Generate Excel report
+        run: npm run generate:excel
+
+      - name: Generate QA summary
+        run: npm run generate:summary
+
+      - name: Generate traceability matrix
+        run: npm run generate:traceability
+
+      # ── Summarise in GitHub Actions ──────────────────────
+      - name: Write job summary
+        run: |
+          echo "## QA Report Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| File | Description |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| test-report.xlsx | 全テストケース + 実行結果 (Excel) |" >> $GITHUB_STEP_SUMMARY
+          echo "| qa-summary.md | PASS/FAIL/SKIP 集計サマリ |" >> $GITHUB_STEP_SUMMARY
+          echo "| traceability.md | 要件↔テストケース対応表 |" >> $GITHUB_STEP_SUMMARY
+          echo "| traceability.xlsx | トレーサビリティ (Excel) |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat reports/latest/qa-summary.md >> $GITHUB_STEP_SUMMARY
+
+      # ── Upload artifacts ────────────────────────────────
+      - name: Upload QA reports artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-reports-${{ github.sha }}
+          path: reports/latest/
+          retention-days: 90
+          if-no-files-found: error

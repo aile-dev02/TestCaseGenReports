@@ -1,11 +1,34 @@
+# QA Execution Results — 2026-05 Release
+# Format: each key is a test case ID
+# status: PASS | FAIL | SKIP | NOT_EXECUTED
+
 AUTH-001:
-  ステータス: PASS
-  担当者: onawa
-  完了日時: 2026-05-11T10:00:00
-  エビデンス:
-    - evidence/AUTH-001/step1.png
+  status: PASS
+  assignee: onawa
+  completed_at: "2026-05-11T10:00:00"
+  evidence:
+    - evidence/AUTH-001/login-screen.png
+    - evidence/AUTH-001/dashboard-redirect.png
 
 AUTH-002:
-  ステータス: NG
-  担当者: onawa
-  不具合: BUG-192
+  status: FAIL
+  assignee: onawa
+  completed_at: "2026-05-11T10:30:00"
+  bug: BUG-192
+  notes: "パスワード試行失敗カウントがインクリメントされない不具合"
+  evidence:
+    - evidence/AUTH-002/error-message.png
+
+AUTH-003:
+  status: NOT_EXECUTED
+  notes: "セキュリティテスト環境の準備待ち"
+
+USER-001:
+  status: PASS
+  assignee: yamada
+  completed_at: "2026-05-11T11:00:00"
+  evidence:
+    - evidence/USER-001/profile-update.png
+
+USER-002:
+  status: NOT_EXECUTED
