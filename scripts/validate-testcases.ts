@@ -1,17 +1,16 @@
 /**
- * CLI: validate all Markdown test cases under master/testcases/.
+ * CLI: master/testcases/ 以下の全 Markdown テストケースを検証する。
  *
- * Checks:
- *   1. FrontMatter schema (via Zod) — missing fields, wrong types
- *   2. Duplicate IDs across files
- *   3. Missing requirement link
- *   4. Empty # 手順 section
- *   5. Empty # 期待結果 section
- *   6. Priority value correctness (covered by Zod but surfaced explicitly)
+ * チェック内容:
+ *   1. FrontMatter スキーマ（Zod）— 必須フィールド不足・型不正
+ *   2. ID 重複
+ *   3. 要件ID 未設定
+ *   4. # 手順 セクションが空または欠落
+ *   5. # 期待結果 セクションが空または欠落
  *
- * Exit code: 0 on success, 1 on any error.
+ * 終了コード: 0 = OK、1 = エラーあり
  *
- * Usage:
+ * 使用方法:
  *   npm run validate
  *   tsx scripts/validate-testcases.ts
  */
@@ -25,36 +24,28 @@ import type { ValidationError } from './lib/types.js'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT_DIR = join(__dirname, '..')
 
-// ─────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────
-
 function rel(filePath: string): string {
   return relative(ROOT_DIR, filePath).replace(/\\/g, '/')
 }
 
-// ─────────────────────────────────────────────
-// Main validation logic
-// ─────────────────────────────────────────────
-
 function run(): void {
   console.log('╔══════════════════════════════════════╗')
-  console.log('║  QA Test Case Validator               ║')
+  console.log('║  QA テストケース バリデーター         ║')
   console.log('╚══════════════════════════════════════╝\n')
 
   const testCases = loadTestCases(ROOT_DIR)
 
   if (testCases.length === 0) {
-    console.warn('⚠  No test cases found in master/testcases/')
-    console.warn('   Create at least one .md file to begin.\n')
+    console.warn('⚠  master/testcases/ にテストケースが見つかりません')
+    console.warn('   .md ファイルを1件以上作成してください。\n')
     process.exit(0)
   }
 
-  console.log(`Found ${testCases.length} test case(s). Validating...\n`)
+  console.log(`${testCases.length} 件のテストケースを検証中...\n`)
 
   const errors: ValidationError[] = []
 
-  // ── 1. Schema validation ───────────────────
+  // ── 1. スキーマ検証 ────────────────────────
   for (const tc of testCases) {
     const result = TestCaseFrontmatterSchema.safeParse(tc.frontmatter)
     if (!result.success) {
@@ -68,10 +59,10 @@ function run(): void {
     }
   }
 
-  // ── 2. Duplicate ID check ──────────────────
+  // ── 2. ID 重複チェック ─────────────────────
   const idMap = new Map<string, string[]>()
   for (const tc of testCases) {
-    const id = tc.frontmatter.id ?? '(no id)'
+    const id = tc.frontmatter.id ?? '(id なし)'
     if (!idMap.has(id)) idMap.set(id, [])
     idMap.get(id)!.push(rel(tc.filePath))
   }
@@ -81,61 +72,58 @@ function run(): void {
         errors.push({
           file,
           errorType: 'DUPLICATE_ID',
-          message: `ID "${id}" appears in multiple files: ${files.join(', ')}`,
+          message: `ID "${id}" が複数のファイルに存在します: ${files.join(', ')}`,
         })
       }
     }
   }
 
-  // ── 3. Missing requirement link ────────────
+  // ── 3. 要件ID 未設定 ──────────────────────
   for (const tc of testCases) {
-    if (!tc.frontmatter.requirement) {
+    if (!tc.frontmatter.要件ID) {
       errors.push({
         file: rel(tc.filePath),
-        errorType: 'MISSING_REQUIREMENT',
-        message: `"${tc.frontmatter.id ?? '?'}" has no requirement: field — add REQ-CATEGORY-NNN`,
+        errorType: 'MISSING_要件ID',
+        message: `"${tc.frontmatter.id ?? '?'}" に 要件ID フィールドがありません — REQ-CATEGORY-NNN を設定してください`,
       })
     }
   }
 
-  // ── 4. Empty steps section ─────────────────
+  // ── 4. 手順セクション空 ───────────────────
   for (const tc of testCases) {
     if (tc.steps.length === 0) {
       errors.push({
         file: rel(tc.filePath),
-        errorType: 'MISSING_STEPS',
-        message: `"${tc.frontmatter.id ?? '?'}" — # 手順 section is absent or contains no list items`,
+        errorType: 'MISSING_手順',
+        message: `"${tc.frontmatter.id ?? '?'}" — # 手順 セクションがないか、リスト項目がありません`,
       })
     }
   }
 
-  // ── 5. Empty expected results section ──────
+  // ── 5. 期待結果セクション空 ───────────────
   for (const tc of testCases) {
     if (tc.expectedResults.length === 0) {
       errors.push({
         file: rel(tc.filePath),
-        errorType: 'MISSING_EXPECTED_RESULTS',
-        message: `"${tc.frontmatter.id ?? '?'}" — # 期待結果 section is absent or contains no list items`,
+        errorType: 'MISSING_期待結果',
+        message: `"${tc.frontmatter.id ?? '?'}" — # 期待結果 セクションがないか、リスト項目がありません`,
       })
     }
   }
 
-  // ─────────────────────────────────────────
-  // Report
-  // ─────────────────────────────────────────
+  // ── レポート ──────────────────────────────
   if (errors.length === 0) {
-    console.log(`✅  All ${testCases.length} test case(s) passed validation.\n`)
+    console.log(`✅  全 ${testCases.length} 件のテストケースがバリデーションを通過しました。\n`)
     process.exit(0)
   }
 
-  // Group by file for readable output
   const byFile = new Map<string, ValidationError[]>()
   for (const err of errors) {
     if (!byFile.has(err.file)) byFile.set(err.file, [])
     byFile.get(err.file)!.push(err)
   }
 
-  console.error(`❌  Found ${errors.length} error(s) in ${byFile.size} file(s):\n`)
+  console.error(`❌  ${byFile.size} ファイルで ${errors.length} 件のエラーが見つかりました:\n`)
 
   for (const [file, fileErrors] of byFile) {
     console.error(`  📄 ${file}`)

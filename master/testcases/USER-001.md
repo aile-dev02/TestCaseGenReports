@@ -1,14 +1,14 @@
 ---
 id: USER-001
-title: ユーザープロフィール更新（正常）
-requirement: REQ-USER-001
-priority: medium
-category: user
-type: positive
-preconditions:
+タイトル: ユーザープロフィール更新（正常）
+要件ID: REQ-USER-001
+優先度: medium
+カテゴリ: user
+タイプ: positive
+前提条件:
   - ログイン済みであること
   - マイページにアクセス権限があること
-tags:
+タグ:
   - profile
   - user-management
 ---

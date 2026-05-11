@@ -1,9 +1,9 @@
 /**
- * CLI: generate the QA summary Markdown report.
+ * CLI: QA サマリ Markdown レポートを生成する。
  *
- * Output: reports/latest/qa-summary.md
+ * 出力先: reports/latest/qa-summary.md
  *
- * Usage:
+ * 使用方法:
  *   npm run generate:summary
  *   tsx scripts/generate-summary.ts
  */
@@ -23,7 +23,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT_DIR = join(__dirname, '..')
 
 // ─────────────────────────────────────────────
-// Computation
+// 集計
 // ─────────────────────────────────────────────
 
 function computeSummary(): QASummary {
@@ -40,7 +40,7 @@ function computeSummary(): QASummary {
 
   for (const tc of testCases) {
     const result = results.get(tc.frontmatter.id)
-    const status = result?.status ?? 'NOT_EXECUTED'
+    const status = result?.ステータス ?? 'NOT_EXECUTED'
 
     if (status === 'PASS') pass++
     else if (status === 'FAIL') fail++
@@ -48,16 +48,16 @@ function computeSummary(): QASummary {
     else notExecuted++
 
     if (status === 'FAIL') {
-      if (tc.frontmatter.priority === 'high') {
+      if (tc.frontmatter.優先度 === 'high') {
         highPriorityFails.push(tc.frontmatter.id)
       }
       failList.push({
         id: tc.frontmatter.id,
-        title: tc.frontmatter.title,
-        priority: tc.frontmatter.priority,
-        assignee: result?.assignee,
-        bug: result?.bug,
-        notes: result?.notes,
+        title: tc.frontmatter.タイトル,
+        priority: tc.frontmatter.優先度,
+        assignee: result?.担当者,
+        bug: result?.不具合,
+        notes: result?.メモ,
       })
     }
   }
@@ -80,7 +80,7 @@ function computeSummary(): QASummary {
 }
 
 // ─────────────────────────────────────────────
-// Markdown rendering
+// Markdown レンダリング
 // ─────────────────────────────────────────────
 
 function passRateEmoji(rate: number): string {
@@ -98,7 +98,6 @@ function renderMarkdown(s: QASummary): string {
   lines.push(`**実行セット:** ${s.runId}`)
   lines.push('')
 
-  // ── Statistics table ────────────────────────
   lines.push('## 実行統計')
   lines.push('')
   lines.push('| 項目 | 件数 |')
@@ -114,7 +113,6 @@ function renderMarkdown(s: QASummary): string {
   )
   lines.push('')
 
-  // ── High priority fails ─────────────────────
   lines.push('## 高優先度FAIL')
   lines.push('')
   if (s.highPriorityFails.length === 0) {
@@ -126,7 +124,6 @@ function renderMarkdown(s: QASummary): string {
   }
   lines.push('')
 
-  // ── Fail list table ─────────────────────────
   lines.push('## FAIL一覧')
   lines.push('')
 
@@ -149,7 +146,6 @@ function renderMarkdown(s: QASummary): string {
   }
   lines.push('')
 
-  // ── Footer ──────────────────────────────────
   lines.push('---')
   lines.push('')
   lines.push(
@@ -165,7 +161,7 @@ function renderMarkdown(s: QASummary): string {
 // ─────────────────────────────────────────────
 
 function main(): void {
-  console.log('📋 QA Summary Generator')
+  console.log('📋 QA サマリ ジェネレーター')
   console.log('─'.repeat(40))
 
   const summary = computeSummary()
@@ -176,14 +172,14 @@ function main(): void {
   const outputPath = join(outputDir, 'qa-summary.md')
   writeFileSync(outputPath, md, 'utf-8')
 
-  console.log(`\nResults for run: ${summary.runId}`)
-  console.log(`  Total      : ${summary.total}`)
-  console.log(`  PASS       : ${summary.pass}`)
-  console.log(`  FAIL       : ${summary.fail}`)
-  console.log(`  SKIP       : ${summary.skip}`)
-  console.log(`  Not Exec.  : ${summary.notExecuted}`)
-  console.log(`  Pass Rate  : ${summary.passRate}%`)
-  console.log(`\n✅  Saved: ${outputPath}\n`)
+  console.log(`\n実行セット: ${summary.runId}`)
+  console.log(`  総件数   : ${summary.total}`)
+  console.log(`  PASS     : ${summary.pass}`)
+  console.log(`  FAIL     : ${summary.fail}`)
+  console.log(`  SKIP     : ${summary.skip}`)
+  console.log(`  未実施   : ${summary.notExecuted}`)
+  console.log(`  Pass率   : ${summary.passRate}%`)
+  console.log(`\n✅  保存先: ${outputPath}\n`)
 }
 
 main()

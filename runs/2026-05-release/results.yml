@@ -1,34 +1,34 @@
-# QA Execution Results — 2026-05 Release
-# Format: each key is a test case ID
-# status: PASS | FAIL | SKIP | NOT_EXECUTED
+# QA 実行結果 — 2026-05 リリース
+# キーはテストケース ID、各フィールドは日本語表記
+# ステータス: PASS | FAIL | SKIP | NOT_EXECUTED
 
 AUTH-001:
-  status: PASS
-  assignee: onawa
-  completed_at: "2026-05-11T10:00:00"
-  evidence:
+  ステータス: PASS
+  担当者: onawa
+  完了日時: "2026-05-11T10:00:00"
+  エビデンス:
     - evidence/AUTH-001/login-screen.png
     - evidence/AUTH-001/dashboard-redirect.png
 
 AUTH-002:
-  status: FAIL
-  assignee: onawa
-  completed_at: "2026-05-11T10:30:00"
-  bug: BUG-192
-  notes: "パスワード試行失敗カウントがインクリメントされない不具合"
-  evidence:
+  ステータス: FAIL
+  担当者: onawa
+  完了日時: "2026-05-11T10:30:00"
+  不具合: BUG-192
+  メモ: "パスワード試行失敗カウントがインクリメントされない不具合"
+  エビデンス:
     - evidence/AUTH-002/error-message.png
 
 AUTH-003:
-  status: NOT_EXECUTED
-  notes: "セキュリティテスト環境の準備待ち"
+  ステータス: NOT_EXECUTED
+  メモ: "セキュリティテスト環境の準備待ち"
 
 USER-001:
-  status: PASS
-  assignee: yamada
-  completed_at: "2026-05-11T11:00:00"
-  evidence:
+  ステータス: PASS
+  担当者: yamada
+  完了日時: "2026-05-11T11:00:00"
+  エビデンス:
     - evidence/USER-001/profile-update.png
 
 USER-002:
-  status: NOT_EXECUTED
+  ステータス: NOT_EXECUTED

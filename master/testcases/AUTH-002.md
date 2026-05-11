@@ -1,14 +1,14 @@
 ---
 id: AUTH-002
-title: 誤パスワードによるログイン失敗
-requirement: REQ-LOGIN-001
-priority: high
-category: auth
-type: negative
-preconditions:
+タイトル: 誤パスワードによるログイン失敗
+要件ID: REQ-LOGIN-001
+優先度: high
+カテゴリ: auth
+タイプ: negative
+前提条件:
   - ユーザーアカウントが存在する
   - アカウントが有効
-tags:
+タグ:
   - login
   - security
 ---

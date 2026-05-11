@@ -1,15 +1,15 @@
 ---
 id: AUTH-003
-title: アカウントロックアウト（連続失敗）
-requirement: REQ-LOGIN-001
-priority: high
-category: auth
-type: security
-preconditions:
+タイトル: アカウントロックアウト（連続失敗）
+要件ID: REQ-LOGIN-001
+優先度: high
+カテゴリ: auth
+タイプ: security
+前提条件:
   - ユーザーアカウントが存在する
   - アカウントが有効
   - ロックアウト閾値が5回に設定されている
-tags:
+タグ:
   - security
   - login
 ---

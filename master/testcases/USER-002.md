@@ -1,13 +1,13 @@
 ---
 id: USER-002
-title: 無効メールアドレスへの更新バリデーション
-requirement: REQ-USER-001
-priority: medium
-category: user
-type: negative
-preconditions:
+タイトル: 無効メールアドレスへの更新バリデーション
+要件ID: REQ-USER-001
+優先度: medium
+カテゴリ: user
+タイプ: negative
+前提条件:
   - ログイン済みであること
-tags:
+タグ:
   - profile
   - validation
 ---

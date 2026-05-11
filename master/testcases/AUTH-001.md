@@ -1,14 +1,14 @@
 ---
 id: AUTH-001
-title: 正常ログイン
-requirement: REQ-LOGIN-001
-priority: high
-category: auth
-type: positive
-preconditions:
+タイトル: 正常ログイン
+要件ID: REQ-LOGIN-001
+優先度: high
+カテゴリ: auth
+タイプ: positive
+前提条件:
   - ユーザーアカウントが存在する
   - アカウントが有効（停止・削除されていない）
-tags:
+タグ:
   - smoke
   - login
 ---

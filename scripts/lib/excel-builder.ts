@@ -1,17 +1,15 @@
 /**
- * Excel workbook builder.
+ * Excel ワークブックビルダー。
  *
- * Produces a multi-sheet .xlsx file using ExcelJS.  All formatting
- * (header colours, borders, auto-filter, freeze panes, conditional
- * formatting, column widths) is applied here so the caller only needs
- * to pass data.
+ * ExcelJS を使用して .xlsx ファイルを生成する。
+ * ヘッダー色、罫線、AutoFilter、FreezePanes、条件付き書式、列幅調整をすべてここで適用。
  *
- * Sheet structure
- * ───────────────
- *   1. テストケース一覧        – All test cases with latest status
- *   2. 要件別テストケース       – Test cases grouped per requirement
- *   3. 実行結果               – Full execution result details
- *   4. FAIL一覧               – Failed cases only, for quick triage
+ * シート構成
+ * ──────────
+ *   1. テストケース一覧        – 全テストケースと最新実行ステータス
+ *   2. 要件別テストケース       – 要件 ID ごとにグループ化
+ *   3. 実行結果               – 実行詳細（担当者・エビデンス・不具合等）
+ *   4. FAIL一覧               – FAIL のみ抽出（トリアージ用）
  */
 
 import ExcelJS from 'exceljs'
@@ -19,7 +17,7 @@ import type { ParsedTestCase } from './types.js'
 import type { TestResult } from '../../schemas/results.js'
 
 // ─────────────────────────────────────────────
-// Colour constants (ARGB without leading #)
+// カラー定数（ARGB、# なし）
 // ─────────────────────────────────────────────
 const C = {
   headerBg: 'FF4472C4',
@@ -39,7 +37,7 @@ const C = {
 } as const
 
 // ─────────────────────────────────────────────
-// Style helpers
+// スタイルヘルパー
 // ─────────────────────────────────────────────
 
 const thinBorder: Partial<ExcelJS.Borders> = {
@@ -52,30 +50,19 @@ const thinBorder: Partial<ExcelJS.Borders> = {
 function applyHeaderStyle(row: ExcelJS.Row): void {
   row.height = 28
   row.eachCell((cell) => {
-    cell.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: C.headerBg },
-    }
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.headerBg } }
     cell.font = { bold: true, color: { argb: C.headerFg }, size: 10 }
     cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
     cell.border = thinBorder
   })
 }
 
-function applyDataRowStyle(
-  row: ExcelJS.Row,
-  isAlt: boolean,
-): void {
+function applyDataRowStyle(row: ExcelJS.Row, isAlt: boolean): void {
   row.eachCell({ includeEmpty: true }, (cell) => {
     cell.alignment = { wrapText: true, vertical: 'top' }
     cell.border = thinBorder
     if (isAlt) {
-      cell.fill = {
-        type: 'pattern',
-        pattern: 'solid',
-        fgColor: { argb: C.altRow },
-      }
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: C.altRow } }
     }
   })
 }
@@ -118,35 +105,32 @@ function addTestCaseListSheet(
 
   ws.columns = [
     { header: 'ID', key: 'id', width: 14 },
-    { header: 'タイトル', key: 'title', width: 36 },
-    { header: '要件ID', key: 'requirement', width: 16 },
-    { header: '優先度', key: 'priority', width: 10 },
-    { header: 'カテゴリ', key: 'category', width: 12 },
-    { header: 'タイプ', key: 'type', width: 13 },
-    { header: '前提条件', key: 'preconditions', width: 42 },
+    { header: 'タイトル', key: 'タイトル', width: 36 },
+    { header: '要件ID', key: '要件ID', width: 16 },
+    { header: '優先度', key: '優先度', width: 10 },
+    { header: 'カテゴリ', key: 'カテゴリ', width: 12 },
+    { header: 'タイプ', key: 'タイプ', width: 13 },
+    { header: '前提条件', key: '前提条件', width: 42 },
     { header: '手順', key: 'steps', width: 52 },
     { header: '期待結果', key: 'expectedResults', width: 52 },
     { header: '実行ステータス', key: 'status', width: 16 },
   ]
 
   applyHeaderStyle(ws.getRow(1))
-  ws.autoFilter = {
-    from: { row: 1, column: 1 },
-    to: { row: 1, column: 10 },
-  }
+  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 10 } }
 
   testCases.forEach((tc, idx) => {
     const result = results.get(tc.frontmatter.id)
-    const status = result?.status ?? 'NOT_EXECUTED'
+    const status = result?.ステータス ?? 'NOT_EXECUTED'
 
     const row = ws.addRow({
       id: tc.frontmatter.id,
-      title: tc.frontmatter.title,
-      requirement: tc.frontmatter.requirement ?? '',
-      priority: tc.frontmatter.priority,
-      category: tc.frontmatter.category,
-      type: tc.frontmatter.type,
-      preconditions: (tc.frontmatter.preconditions ?? []).join('\n'),
+      'タイトル': tc.frontmatter.タイトル,
+      '要件ID': tc.frontmatter.要件ID ?? '',
+      '優先度': tc.frontmatter.優先度,
+      'カテゴリ': tc.frontmatter.カテゴリ,
+      'タイプ': tc.frontmatter.タイプ,
+      '前提条件': (tc.frontmatter.前提条件 ?? []).join('\n'),
       steps: tc.steps.map((s, i) => `${i + 1}. ${s}`).join('\n'),
       expectedResults: tc.expectedResults.map((r) => `• ${r}`).join('\n'),
       status,
@@ -154,13 +138,12 @@ function addTestCaseListSheet(
 
     applyDataRowStyle(row, idx % 2 === 1)
     applyStatusStyle(row.getCell('status'), status)
-    applyPriorityStyle(row.getCell('priority'), tc.frontmatter.priority)
+    applyPriorityStyle(row.getCell('優先度'), tc.frontmatter.優先度)
 
-    // Auto-height hint: rough estimate based on steps count
     row.height = Math.max(20, tc.steps.length * 18)
   })
 
-  // Conditional formatting as an extra visual layer (complements direct styles)
+  // 条件付き書式（直接スタイルに加えて視覚的フィードバックを追加）
   const lastRow = Math.max(testCases.length + 1, 2)
   ws.addConditionalFormatting({
     ref: `J2:J${lastRow}`,
@@ -171,11 +154,7 @@ function addTestCaseListSheet(
         text: 'FAIL',
         priority: 1,
         style: {
-          fill: {
-            type: 'pattern',
-            pattern: 'solid',
-            bgColor: { argb: C.failBg },
-          },
+          fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: C.failBg } },
           font: { bold: true, color: { argb: C.failFg } },
         },
       } as ExcelJS.ConditionalFormattingRule,
@@ -197,24 +176,21 @@ function addByRequirementSheet(
   })
 
   ws.columns = [
-    { header: '要件ID', key: 'requirement', width: 16 },
+    { header: '要件ID', key: '要件ID', width: 16 },
     { header: 'テストケースID', key: 'id', width: 14 },
-    { header: 'タイトル', key: 'title', width: 36 },
-    { header: '優先度', key: 'priority', width: 10 },
-    { header: 'タイプ', key: 'type', width: 13 },
+    { header: 'タイトル', key: 'タイトル', width: 36 },
+    { header: '優先度', key: '優先度', width: 10 },
+    { header: 'タイプ', key: 'タイプ', width: 13 },
     { header: '実行ステータス', key: 'status', width: 16 },
   ]
 
   applyHeaderStyle(ws.getRow(1))
-  ws.autoFilter = {
-    from: { row: 1, column: 1 },
-    to: { row: 1, column: 6 },
-  }
+  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 6 } }
 
-  // Group by requirement ID
+  // 要件 ID でグループ化
   const grouped = new Map<string, ParsedTestCase[]>()
   for (const tc of testCases) {
-    const key = tc.frontmatter.requirement ?? '(要件なし)'
+    const key = tc.frontmatter.要件ID ?? '(要件なし)'
     if (!grouped.has(key)) grouped.set(key, [])
     grouped.get(key)!.push(tc)
   }
@@ -222,18 +198,18 @@ function addByRequirementSheet(
   let idx = 0
   for (const [reqId, tcs] of [...grouped.entries()].sort()) {
     for (const tc of tcs) {
-      const status = results.get(tc.frontmatter.id)?.status ?? 'NOT_EXECUTED'
+      const status = results.get(tc.frontmatter.id)?.ステータス ?? 'NOT_EXECUTED'
       const row = ws.addRow({
-        requirement: reqId,
+        '要件ID': reqId,
         id: tc.frontmatter.id,
-        title: tc.frontmatter.title,
-        priority: tc.frontmatter.priority,
-        type: tc.frontmatter.type,
+        'タイトル': tc.frontmatter.タイトル,
+        '優先度': tc.frontmatter.優先度,
+        'タイプ': tc.frontmatter.タイプ,
         status,
       })
       applyDataRowStyle(row, idx % 2 === 1)
       applyStatusStyle(row.getCell('status'), status)
-      applyPriorityStyle(row.getCell('priority'), tc.frontmatter.priority)
+      applyPriorityStyle(row.getCell('優先度'), tc.frontmatter.優先度)
       idx++
     }
   }
@@ -254,41 +230,38 @@ function addExecutionResultsSheet(
 
   ws.columns = [
     { header: 'ID', key: 'id', width: 14 },
-    { header: 'タイトル', key: 'title', width: 36 },
-    { header: '優先度', key: 'priority', width: 10 },
+    { header: 'タイトル', key: 'タイトル', width: 36 },
+    { header: '優先度', key: '優先度', width: 10 },
     { header: '実行ステータス', key: 'status', width: 16 },
-    { header: '担当者', key: 'assignee', width: 14 },
-    { header: '完了日時', key: 'completed_at', width: 22 },
-    { header: 'エビデンス', key: 'evidence', width: 40 },
-    { header: '不具合ID', key: 'bug', width: 14 },
-    { header: 'メモ', key: 'notes', width: 40 },
+    { header: '担当者', key: '担当者', width: 14 },
+    { header: '完了日時', key: '完了日時', width: 22 },
+    { header: 'エビデンス', key: 'エビデンス', width: 40 },
+    { header: '不具合ID', key: '不具合', width: 14 },
+    { header: 'メモ', key: 'メモ', width: 40 },
   ]
 
   applyHeaderStyle(ws.getRow(1))
-  ws.autoFilter = {
-    from: { row: 1, column: 1 },
-    to: { row: 1, column: 9 },
-  }
+  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 9 } }
 
   testCases.forEach((tc, idx) => {
     const result = results.get(tc.frontmatter.id)
-    const status = result?.status ?? 'NOT_EXECUTED'
+    const status = result?.ステータス ?? 'NOT_EXECUTED'
 
     const row = ws.addRow({
       id: tc.frontmatter.id,
-      title: tc.frontmatter.title,
-      priority: tc.frontmatter.priority,
+      'タイトル': tc.frontmatter.タイトル,
+      '優先度': tc.frontmatter.優先度,
       status,
-      assignee: result?.assignee ?? '',
-      completed_at: result?.completed_at ?? '',
-      evidence: (result?.evidence ?? []).join('\n'),
-      bug: result?.bug ?? '',
-      notes: result?.notes ?? '',
+      '担当者': result?.担当者 ?? '',
+      '完了日時': result?.完了日時 ?? '',
+      'エビデンス': (result?.エビデンス ?? []).join('\n'),
+      '不具合': result?.不具合 ?? '',
+      'メモ': result?.メモ ?? '',
     })
 
     applyDataRowStyle(row, idx % 2 === 1)
     applyStatusStyle(row.getCell('status'), status)
-    applyPriorityStyle(row.getCell('priority'), tc.frontmatter.priority)
+    applyPriorityStyle(row.getCell('優先度'), tc.frontmatter.優先度)
   })
 }
 
@@ -307,27 +280,24 @@ function addFailListSheet(
 
   ws.columns = [
     { header: 'ID', key: 'id', width: 14 },
-    { header: 'タイトル', key: 'title', width: 36 },
-    { header: '優先度', key: 'priority', width: 10 },
-    { header: '担当者', key: 'assignee', width: 14 },
-    { header: '完了日時', key: 'completed_at', width: 22 },
-    { header: '不具合ID', key: 'bug', width: 14 },
-    { header: 'メモ', key: 'notes', width: 40 },
-    { header: '要件ID', key: 'requirement', width: 16 },
+    { header: 'タイトル', key: 'タイトル', width: 36 },
+    { header: '優先度', key: '優先度', width: 10 },
+    { header: '担当者', key: '担当者', width: 14 },
+    { header: '完了日時', key: '完了日時', width: 22 },
+    { header: '不具合ID', key: '不具合', width: 14 },
+    { header: 'メモ', key: 'メモ', width: 40 },
+    { header: '要件ID', key: '要件ID', width: 16 },
   ]
 
   applyHeaderStyle(ws.getRow(1))
-  ws.autoFilter = {
-    from: { row: 1, column: 1 },
-    to: { row: 1, column: 8 },
-  }
+  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 8 } }
 
   const failCases = testCases.filter(
-    (tc) => results.get(tc.frontmatter.id)?.status === 'FAIL',
+    (tc) => results.get(tc.frontmatter.id)?.ステータス === 'FAIL',
   )
 
   if (failCases.length === 0) {
-    const row = ws.addRow({ id: '(FAILなし)', title: '', priority: '' })
+    const row = ws.addRow({ id: '(FAILなし)', 'タイトル': '', '優先度': '' })
     applyDataRowStyle(row, false)
     return
   }
@@ -336,33 +306,32 @@ function addFailListSheet(
     const result = results.get(tc.frontmatter.id)!
     const row = ws.addRow({
       id: tc.frontmatter.id,
-      title: tc.frontmatter.title,
-      priority: tc.frontmatter.priority,
-      assignee: result.assignee ?? '',
-      completed_at: result.completed_at ?? '',
-      bug: result.bug ?? '',
-      notes: result.notes ?? '',
-      requirement: tc.frontmatter.requirement ?? '',
+      'タイトル': tc.frontmatter.タイトル,
+      '優先度': tc.frontmatter.優先度,
+      '担当者': result.担当者 ?? '',
+      '完了日時': result.完了日時 ?? '',
+      '不具合': result.不具合 ?? '',
+      'メモ': result.メモ ?? '',
+      '要件ID': tc.frontmatter.要件ID ?? '',
     })
     applyDataRowStyle(row, idx % 2 === 1)
-    // Entire row in fail colour
     row.eachCell({ includeEmpty: true }, (cell) => {
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF0F0' } }
     })
-    applyPriorityStyle(row.getCell('priority'), tc.frontmatter.priority)
+    applyPriorityStyle(row.getCell('優先度'), tc.frontmatter.優先度)
   })
 }
 
 // ─────────────────────────────────────────────
-// Public entry point
+// 公開エントリポイント
 // ─────────────────────────────────────────────
 
 /**
- * Build and write a complete QA Excel workbook to disk.
+ * QA Excel ワークブックをビルドしてディスクに書き込む。
  *
- * @param testCases  All parsed test cases (from loader.loadTestCases)
- * @param results    Execution results map (from loader.loadLatestResults)
- * @param outputPath Absolute path for the output .xlsx file
+ * @param testCases  全テストケース（loader.loadTestCases の戻り値）
+ * @param results    実行結果マップ（loader.loadLatestResults の戻り値）
+ * @param outputPath 出力先 .xlsx ファイルの絶対パス
  */
 export async function buildExcel(
   testCases: ParsedTestCase[],

@@ -1,10 +1,10 @@
 ---
 id: REQ-LOGIN-001
-title: ユーザーログイン機能
-description: ユーザーが登録済みのIDとパスワードでシステムにログインできること
-category: LOGIN
-priority: high
-status: approved
+タイトル: ユーザーログイン機能
+説明: ユーザーが登録済みのIDとパスワードでシステムにログインできること
+カテゴリ: LOGIN
+優先度: high
+ステータス: approved
 ---
 
 ユーザーは登録済みのユーザーIDとパスワードを使用してシステムにログインできること。

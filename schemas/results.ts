@@ -1,38 +1,40 @@
 import { z } from 'zod'
 
 /**
- * Zod schema for a single test result entry inside results.yml.
+ * results.yml の各エントリスキーマ。
+ * 各フィールドは日本語キーで定義する。
  *
- * results.yml structure:
+ * results.yml 記述例:
  *   AUTH-001:
- *     status: PASS
- *     assignee: yamada
- *     completed_at: "2026-05-11T10:00:00"
- *     evidence:
+ *     ステータス: PASS
+ *     担当者: yamada
+ *     完了日時: "2026-05-11T10:00:00"
+ *     エビデンス:
  *       - evidence/AUTH-001/step1.png
  */
 export const TestResultSchema = z.object({
-  status: z
+  /** 実行ステータス */
+  ステータス: z
     .enum(['PASS', 'FAIL', 'SKIP', 'NOT_EXECUTED'])
     .default('NOT_EXECUTED'),
 
-  /** Tester who executed the case */
-  assignee: z.string().optional(),
+  /** テストを実行した担当者 */
+  担当者: z.string().optional(),
 
-  /** ISO 8601 timestamp of test completion */
-  completed_at: z.string().optional(),
+  /** テスト完了日時（ISO 8601） */
+  完了日時: z.string().optional(),
 
-  /** Relative paths to screenshot / log evidence */
-  evidence: z.array(z.string()).optional(),
+  /** スクリーンショット・ログ等のエビデンスへの相対パス */
+  エビデンス: z.array(z.string()).optional(),
 
-  /** Bug ticket ID when status is FAIL */
-  bug: z.string().optional(),
+  /** ステータスが FAIL の場合のバグチケット ID */
+  不具合: z.string().optional(),
 
-  /** Free-form notes */
-  notes: z.string().optional(),
+  /** 自由記述メモ */
+  メモ: z.string().optional(),
 })
 
-/** Top-level results.yml is a map from test case ID to its result */
+/** results.yml のトップレベルはテストケース ID → 結果のマップ */
 export const ResultsFileSchema = z.record(z.string(), TestResultSchema)
 
 export type TestResult = z.infer<typeof TestResultSchema>
