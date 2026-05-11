@@ -1,7 +1,8 @@
 ---
 id: USER-002
 タイトル: 無効メールアドレスへの更新バリデーション
-要件ID: REQ-USER-001
+要件ID:
+  - REQ-USER-001
 優先度: medium
 カテゴリ: user
 タイプ: negative

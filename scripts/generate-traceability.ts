@@ -12,7 +12,7 @@
  *   tsx scripts/generate-traceability.ts
  */
 
-import { dirname, join } from 'path'
+import { dirname, join, relative } from 'path'
 import { fileURLToPath } from 'url'
 import { writeFileSync } from 'fs'
 import ExcelJS from 'exceljs'
@@ -29,6 +29,23 @@ import type { TestResult } from '../schemas/results.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT_DIR = join(__dirname, '..')
+const REPORTS_DIR = join(ROOT_DIR, 'reports', 'latest')
+
+// ─────────────────────────────────────────────
+// リンク生成（reports/latest/ を起点とした相対パス）
+// ─────────────────────────────────────────────
+
+function tcLink(id: string, filePath: string): string {
+  if (id.startsWith('(')) return id
+  const rel = relative(REPORTS_DIR, filePath).replace(/\\/g, '/')
+  return `[${id}](${rel})`
+}
+
+function reqLink(id: string, filePath: string): string {
+  if (id.startsWith('(')) return id
+  const rel = relative(REPORTS_DIR, filePath).replace(/\\/g, '/')
+  return `[${id}](${rel})`
+}
 
 // ─────────────────────────────────────────────
 // マトリクス構築
@@ -43,16 +60,19 @@ function buildMatrix(
   const coveredReqIds = new Set<string>()
 
   for (const req of requirements) {
+    // 要件IDが配列になったため includes で照合
     const linked = testCases.filter(
-      (tc) => tc.frontmatter.要件ID === req.frontmatter.id,
+      (tc) => tc.frontmatter.要件ID?.includes(req.frontmatter.id),
     )
 
     if (linked.length === 0) {
       rows.push({
         requirementId: req.frontmatter.id,
         requirementTitle: req.frontmatter.タイトル,
+        requirementFilePath: req.filePath,
         testCaseId: '(テストケースなし)',
         testCaseTitle: '',
+        testCaseFilePath: '',
         priority: '',
         status: 'NOT_COVERED',
       })
@@ -62,8 +82,10 @@ function buildMatrix(
         rows.push({
           requirementId: req.frontmatter.id,
           requirementTitle: req.frontmatter.タイトル,
+          requirementFilePath: req.filePath,
           testCaseId: tc.frontmatter.id,
           testCaseTitle: tc.frontmatter.タイトル,
+          testCaseFilePath: tc.filePath,
           priority: tc.frontmatter.優先度,
           status: results.get(tc.frontmatter.id)?.ステータス ?? 'NOT_EXECUTED',
         })
@@ -71,15 +93,18 @@ function buildMatrix(
     }
   }
 
-  // どの要件にも紐づかないテストケース
+  // どの既知要件にも紐づかないテストケース
   const knownReqIds = new Set(requirements.map((r) => r.frontmatter.id))
   for (const tc of testCases) {
-    if (!tc.frontmatter.要件ID || !knownReqIds.has(tc.frontmatter.要件ID)) {
+    const hasKnownReq = tc.frontmatter.要件ID?.some((id) => knownReqIds.has(id))
+    if (!hasKnownReq) {
       rows.push({
-        requirementId: tc.frontmatter.要件ID ?? '(要件なし)',
+        requirementId: tc.frontmatter.要件ID?.join(', ') ?? '(要件なし)',
         requirementTitle: '',
+        requirementFilePath: '',
         testCaseId: tc.frontmatter.id,
         testCaseTitle: tc.frontmatter.タイトル,
+        testCaseFilePath: tc.filePath,
         priority: tc.frontmatter.優先度,
         status: results.get(tc.frontmatter.id)?.ステータス ?? 'NOT_EXECUTED',
       })
@@ -103,19 +128,6 @@ function buildMatrix(
 // ─────────────────────────────────────────────
 // Markdown 出力
 // ─────────────────────────────────────────────
-
-/** reports/latest/ を起点にテストケースファイルへの相対リンクを生成 */
-function tcLink(id: string): string {
-  // 特殊値（括弧始まり）はリンク化しない
-  if (id.startsWith('(')) return id
-  return `[${id}](../../master/testcases/${id}.md)`
-}
-
-/** reports/latest/ を起点に要件ファイルへの相対リンクを生成 */
-function reqLink(id: string): string {
-  if (id.startsWith('(')) return id
-  return `[${id}](../../master/requirements/${id}.md)`
-}
 
 function statusBadge(status: string): string {
   const map: Record<string, string> = {
@@ -160,11 +172,13 @@ function renderMarkdown(matrix: TraceabilityMatrix, runId: string): string {
   let lastReqId = ''
   for (const row of matrix.rows) {
     const reqIdCell =
-      row.requirementId === lastReqId ? '' : reqLink(row.requirementId)
+      row.requirementId === lastReqId
+        ? ''
+        : reqLink(row.requirementId, row.requirementFilePath)
     lastReqId = row.requirementId
 
     lines.push(
-      `| ${reqIdCell} | ${row.requirementTitle} | ${tcLink(row.testCaseId)} | ${row.testCaseTitle} | ${row.priority} | ${statusBadge(row.status)} |`,
+      `| ${reqIdCell} | ${row.requirementTitle} | ${tcLink(row.testCaseId, row.testCaseFilePath)} | ${row.testCaseTitle} | ${row.priority} | ${statusBadge(row.status)} |`,
     )
   }
   lines.push('')
@@ -302,14 +316,13 @@ async function main(): Promise<void> {
 
   const matrix = buildMatrix(requirements, testCases, results)
 
-  const outputDir = join(ROOT_DIR, 'reports', 'latest')
-  ensureDir(outputDir)
+  ensureDir(REPORTS_DIR)
 
-  const mdPath = join(outputDir, 'traceability.md')
+  const mdPath = join(REPORTS_DIR, 'traceability.md')
   writeFileSync(mdPath, renderMarkdown(matrix, runId), 'utf-8')
   console.log(`\n  📄 Markdown: ${mdPath}`)
 
-  const xlsxPath = join(outputDir, 'traceability.xlsx')
+  const xlsxPath = join(REPORTS_DIR, 'traceability.xlsx')
   await renderExcel(matrix, xlsxPath)
   console.log(`  📊 Excel   : ${xlsxPath}`)
 

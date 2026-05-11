@@ -13,7 +13,8 @@
     "noUnusedParameters": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "types": ["node"]
   },
   "include": ["scripts/**/*", "schemas/**/*"],
   "exclude": ["node_modules", "dist", "reports"]

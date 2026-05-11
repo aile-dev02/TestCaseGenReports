@@ -1,7 +1,8 @@
 ---
 id: AUTH-001
 タイトル: 正常ログイン
-要件ID: REQ-LOGIN-001
+要件ID:
+  - REQ-LOGIN-001
 優先度: high
 カテゴリ: auth
 タイプ: positive

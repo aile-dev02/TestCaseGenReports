@@ -8,7 +8,7 @@
  *   tsx scripts/generate-summary.ts
  */
 
-import { dirname, join } from 'path'
+import { dirname, join, relative } from 'path'
 import { fileURLToPath } from 'url'
 import { writeFileSync } from 'fs'
 import {
@@ -21,6 +21,16 @@ import type { QASummary, FailEntry } from './lib/types.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT_DIR = join(__dirname, '..')
+const REPORTS_DIR = join(ROOT_DIR, 'reports', 'latest')
+
+// ─────────────────────────────────────────────
+// リンク生成（reports/latest/ を起点とした相対パス）
+// ─────────────────────────────────────────────
+
+function tcLink(id: string, filePath: string): string {
+  const rel = relative(REPORTS_DIR, filePath).replace(/\\/g, '/')
+  return `[${id}](${rel})`
+}
 
 // ─────────────────────────────────────────────
 // 集計
@@ -58,6 +68,7 @@ function computeSummary(): QASummary {
         assignee: result?.担当者,
         bug: result?.不具合,
         notes: result?.メモ,
+        filePath: tc.filePath,
       })
     }
   }
@@ -83,11 +94,6 @@ function computeSummary(): QASummary {
 // Markdown レンダリング
 // ─────────────────────────────────────────────
 
-/** reports/latest/ を起点にテストケースファイルへの相対リンクを生成 */
-function tcLink(id: string): string {
-  return `[${id}](../../master/testcases/${id}.md)`
-}
-
 function passRateEmoji(rate: number): string {
   if (rate === 100) return '🟢'
   if (rate >= 80) return '🟡'
@@ -96,6 +102,9 @@ function passRateEmoji(rate: number): string {
 
 function renderMarkdown(s: QASummary): string {
   const lines: string[] = []
+
+  // failList から id → filePath のマップを構築（高優先度FAILリンク生成に使用）
+  const failPathMap = new Map(s.failList.map((f) => [f.id, f.filePath]))
 
   lines.push('# QA実行サマリレポート')
   lines.push('')
@@ -124,7 +133,8 @@ function renderMarkdown(s: QASummary): string {
     lines.push('> 高優先度のFAILはありません。')
   } else {
     for (const id of s.highPriorityFails) {
-      lines.push(`- ${tcLink(id)}`)
+      const fp = failPathMap.get(id) ?? ''
+      lines.push(`- ${tcLink(id, fp)}`)
     }
   }
   lines.push('')
@@ -139,7 +149,7 @@ function renderMarkdown(s: QASummary): string {
     lines.push('|:---|:--------|:-------|:-------|:---------|:-----|')
     for (const f of s.failList) {
       const row = [
-        tcLink(f.id),
+        tcLink(f.id, f.filePath),
         f.title,
         f.priority,
         f.assignee ?? '',
@@ -172,9 +182,8 @@ function main(): void {
   const summary = computeSummary()
   const md = renderMarkdown(summary)
 
-  const outputDir = join(ROOT_DIR, 'reports', 'latest')
-  ensureDir(outputDir)
-  const outputPath = join(outputDir, 'qa-summary.md')
+  ensureDir(REPORTS_DIR)
+  const outputPath = join(REPORTS_DIR, 'qa-summary.md')
   writeFileSync(outputPath, md, 'utf-8')
 
   console.log(`\n実行セット: ${summary.runId}`)

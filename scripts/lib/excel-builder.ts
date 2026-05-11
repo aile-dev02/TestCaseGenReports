@@ -106,7 +106,7 @@ function addTestCaseListSheet(
   ws.columns = [
     { header: 'ID', key: 'id', width: 14 },
     { header: 'タイトル', key: 'タイトル', width: 36 },
-    { header: '要件ID', key: '要件ID', width: 16 },
+    { header: '要件ID', key: '要件ID', width: 20 },
     { header: '優先度', key: '優先度', width: 10 },
     { header: 'カテゴリ', key: 'カテゴリ', width: 12 },
     { header: 'タイプ', key: 'タイプ', width: 13 },
@@ -126,7 +126,7 @@ function addTestCaseListSheet(
     const row = ws.addRow({
       id: tc.frontmatter.id,
       'タイトル': tc.frontmatter.タイトル,
-      '要件ID': tc.frontmatter.要件ID ?? '',
+      '要件ID': (tc.frontmatter.要件ID ?? []).join('\n'),
       '優先度': tc.frontmatter.優先度,
       'カテゴリ': tc.frontmatter.カテゴリ,
       'タイプ': tc.frontmatter.タイプ,
@@ -187,12 +187,17 @@ function addByRequirementSheet(
   applyHeaderStyle(ws.getRow(1))
   ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 6 } }
 
-  // 要件 ID でグループ化
+  // 要件 ID でグループ化（複数要件IDを持つ場合はそれぞれの行に出現）
   const grouped = new Map<string, ParsedTestCase[]>()
   for (const tc of testCases) {
-    const key = tc.frontmatter.要件ID ?? '(要件なし)'
-    if (!grouped.has(key)) grouped.set(key, [])
-    grouped.get(key)!.push(tc)
+    const reqIds =
+      tc.frontmatter.要件ID && tc.frontmatter.要件ID.length > 0
+        ? tc.frontmatter.要件ID
+        : ['(要件なし)']
+    for (const reqId of reqIds) {
+      if (!grouped.has(reqId)) grouped.set(reqId, [])
+      grouped.get(reqId)!.push(tc)
+    }
   }
 
   let idx = 0
@@ -312,7 +317,7 @@ function addFailListSheet(
       '完了日時': result.完了日時 ?? '',
       '不具合': result.不具合 ?? '',
       'メモ': result.メモ ?? '',
-      '要件ID': tc.frontmatter.要件ID ?? '',
+      '要件ID': (tc.frontmatter.要件ID ?? []).join('\n'),
     })
     applyDataRowStyle(row, idx % 2 === 1)
     row.eachCell({ includeEmpty: true }, (cell) => {

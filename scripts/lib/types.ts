@@ -69,14 +69,20 @@ export interface FailEntry {
   assignee: string | undefined
   bug: string | undefined
   notes: string | undefined
+  /** テストケースファイルの絶対パス（リンク生成用） */
+  filePath: string
 }
 
 /** One row in the traceability matrix output */
 export interface TraceabilityRow {
   requirementId: string
   requirementTitle: string
+  /** 要件ファイルの絶対パス（リンク生成用） */
+  requirementFilePath: string
   testCaseId: string
   testCaseTitle: string
+  /** テストケースファイルの絶対パス（リンク生成用） */
+  testCaseFilePath: string
   priority: string
   status: string
 }

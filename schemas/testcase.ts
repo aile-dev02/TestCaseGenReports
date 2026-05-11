@@ -14,12 +14,13 @@ export const TestCaseFrontmatterSchema = z.object({
   タイトル: z.string().min(1, 'タイトルは必須です'),
 
   /**
-   * 紐づく要件 ID（REQ-CATEGORY-NNN 形式）。
-   * ドラフト段階では省略可。
+   * 紐づく要件 ID の一覧（REQ-CATEGORY-NNN 形式）。
+   * 複数の要件に跨るテストケースには複数指定可。ドラフト段階では省略可。
    */
   要件ID: z
-    .string()
-    .regex(/^REQ-[A-Z0-9]+-\d+$/, '要件ID は REQ-CATEGORY-NNN 形式で指定してください')
+    .array(
+      z.string().regex(/^REQ-[A-Z0-9]+-\d+$/, '要件ID は REQ-CATEGORY-NNN 形式で指定してください'),
+    )
     .optional(),
 
   /** 実行優先度 */

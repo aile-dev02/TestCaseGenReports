@@ -80,11 +80,11 @@ function run(): void {
 
   // ── 3. 要件ID 未設定 ──────────────────────
   for (const tc of testCases) {
-    if (!tc.frontmatter.要件ID) {
+    if (!tc.frontmatter.要件ID || tc.frontmatter.要件ID.length === 0) {
       errors.push({
         file: rel(tc.filePath),
         errorType: 'MISSING_要件ID',
-        message: `"${tc.frontmatter.id ?? '?'}" に 要件ID フィールドがありません — REQ-CATEGORY-NNN を設定してください`,
+        message: `"${tc.frontmatter.id ?? '?'}" に 要件ID フィールドがありません — REQ-CATEGORY-NNN をリスト形式で設定してください`,
       })
     }
   }

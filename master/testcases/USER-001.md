@@ -1,7 +1,8 @@
 ---
 id: USER-001
 タイトル: ユーザープロフィール更新（正常）
-要件ID: REQ-USER-001
+要件ID:
+  - REQ-USER-001
 優先度: medium
 カテゴリ: user
 タイプ: positive

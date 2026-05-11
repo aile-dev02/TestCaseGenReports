@@ -1,7 +1,8 @@
 ---
 id: AUTH-003
 タイトル: アカウントロックアウト（連続失敗）
-要件ID: REQ-LOGIN-001
+要件ID:
+  - REQ-LOGIN-001
 優先度: high
 カテゴリ: auth
 タイプ: security
