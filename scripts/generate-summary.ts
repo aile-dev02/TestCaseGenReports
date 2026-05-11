@@ -83,6 +83,11 @@ function computeSummary(): QASummary {
 // Markdown レンダリング
 // ─────────────────────────────────────────────
 
+/** reports/latest/ を起点にテストケースファイルへの相対リンクを生成 */
+function tcLink(id: string): string {
+  return `[${id}](../../master/testcases/${id}.md)`
+}
+
 function passRateEmoji(rate: number): string {
   if (rate === 100) return '🟢'
   if (rate >= 80) return '🟡'
@@ -119,7 +124,7 @@ function renderMarkdown(s: QASummary): string {
     lines.push('> 高優先度のFAILはありません。')
   } else {
     for (const id of s.highPriorityFails) {
-      lines.push(`- \`${id}\``)
+      lines.push(`- ${tcLink(id)}`)
     }
   }
   lines.push('')
@@ -134,7 +139,7 @@ function renderMarkdown(s: QASummary): string {
     lines.push('|:---|:--------|:-------|:-------|:---------|:-----|')
     for (const f of s.failList) {
       const row = [
-        `\`${f.id}\``,
+        tcLink(f.id),
         f.title,
         f.priority,
         f.assignee ?? '',

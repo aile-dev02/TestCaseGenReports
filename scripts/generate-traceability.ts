@@ -104,6 +104,19 @@ function buildMatrix(
 // Markdown 出力
 // ─────────────────────────────────────────────
 
+/** reports/latest/ を起点にテストケースファイルへの相対リンクを生成 */
+function tcLink(id: string): string {
+  // 特殊値（括弧始まり）はリンク化しない
+  if (id.startsWith('(')) return id
+  return `[${id}](../../master/testcases/${id}.md)`
+}
+
+/** reports/latest/ を起点に要件ファイルへの相対リンクを生成 */
+function reqLink(id: string): string {
+  if (id.startsWith('(')) return id
+  return `[${id}](../../master/requirements/${id}.md)`
+}
+
 function statusBadge(status: string): string {
   const map: Record<string, string> = {
     PASS: '✅ PASS',
@@ -147,11 +160,11 @@ function renderMarkdown(matrix: TraceabilityMatrix, runId: string): string {
   let lastReqId = ''
   for (const row of matrix.rows) {
     const reqIdCell =
-      row.requirementId === lastReqId ? '' : `\`${row.requirementId}\``
+      row.requirementId === lastReqId ? '' : reqLink(row.requirementId)
     lastReqId = row.requirementId
 
     lines.push(
-      `| ${reqIdCell} | ${row.requirementTitle} | \`${row.testCaseId}\` | ${row.testCaseTitle} | ${row.priority} | ${statusBadge(row.status)} |`,
+      `| ${reqIdCell} | ${row.requirementTitle} | ${tcLink(row.testCaseId)} | ${row.testCaseTitle} | ${row.priority} | ${statusBadge(row.status)} |`,
     )
   }
   lines.push('')
