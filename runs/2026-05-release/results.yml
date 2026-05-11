@@ -1,0 +1,11 @@
+AUTH-001:
+  ステータス: PASS
+  担当者: onawa
+  完了日時: 2026-05-11T10:00:00
+  エビデンス:
+    - evidence/AUTH-001/step1.png
+
+AUTH-002:
+  ステータス: NG
+  担当者: onawa
+  不具合: BUG-192
