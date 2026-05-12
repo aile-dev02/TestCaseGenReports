@@ -111,14 +111,15 @@ npm ci
 ```yaml
 ---
 id: AUTH-001              # 必須: PREFIX-NNN 形式
-title: 正常ログイン         # 必須: テストケースのタイトル
-requirement: REQ-LOGIN-001 # 推奨: 紐づく要件ID (REQ-CATEGORY-NNN)
-priority: high             # 必須: high | medium | low
-category: auth             # 必須: 機能カテゴリ
-type: positive             # 必須: positive | negative | boundary | security | performance
-preconditions:             # 任意: 実行前提条件
+タイトル: 正常ログイン      # 必須: テストケースのタイトル
+要件ID:                    # 推奨: 紐づく要件ID の一覧 (REQ-CATEGORY-NNN)
+  - REQ-LOGIN-001
+優先度: high               # 必須: high | medium | low
+カテゴリ: auth             # 必須: 機能カテゴリ
+タイプ: positive           # 必須: positive | negative | boundary | security | performance
+前提条件:                  # 任意: 実行前提条件
   - ユーザーが存在する
-tags:                      # 任意: 自由タグ
+タグ:                      # 任意: 自由タグ
   - smoke
 ---
 ```
@@ -151,10 +152,11 @@ tags:                      # 任意: 自由タグ
 ```yaml
 ---
 id: REQ-LOGIN-001          # 必須: REQ-CATEGORY-NNN 形式
-title: ユーザーログイン機能   # 必須
-category: LOGIN             # 必須
-priority: high              # 必須: high | medium | low
-status: approved            # 必須: draft | approved | deprecated
+タイトル: ユーザーログイン機能 # 必須
+説明: ログイン機能の概要説明   # 任意: トレーサビリティに表示される一行説明
+カテゴリ: LOGIN             # 必須
+優先度: high               # 必須: high | medium | low
+ステータス: approved        # 必須: draft | approved | deprecated
 ---
 ```
 
