@@ -8,7 +8,8 @@
     "generate:excel": "tsx scripts/generate-excel.ts",
     "generate:summary": "tsx scripts/generate-summary.ts",
     "generate:traceability": "tsx scripts/generate-traceability.ts",
-    "generate:all": "npm run generate:excel && npm run generate:summary && npm run generate:traceability",
+    "generate:html": "tsx scripts/generate-html.ts",
+    "generate:all": "npm run generate:excel && npm run generate:summary && npm run generate:traceability && npm run generate:html",
     "ci": "npm run validate && npm run generate:all"
   },
   "dependencies": {
@@ -22,6 +23,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@mermaid-js/mermaid-cli": "^11.14.0",
     "@types/mdast": "^4.0.3",
     "@types/node": "^20.11.0",
     "tsx": "^4.7.0",

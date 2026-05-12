@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QA実行サマリレポート</title>
+  <style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    font-family: "Hiragino Sans", "Noto Sans JP", sans-serif;
+    font-size: 14px;
+    line-height: 1.7;
+    color: #1a1a1a;
+    max-width: 1100px;
+    margin: 2rem auto;
+    padding: 0 1.5rem;
+    background: #fff;
+  }
+  h1 { font-size: 1.6rem; border-bottom: 2px solid #1e3a5f; padding-bottom: .4rem; }
+  h2 { font-size: 1.2rem; margin-top: 2rem; border-left: 4px solid #1e3a5f; padding-left: .6rem; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+  th {
+    background: #1e3a5f;
+    color: #fff;
+    padding: .5rem .8rem;
+    text-align: left;
+    white-space: nowrap;
+  }
+  td { border: 1px solid #ccc; padding: .4rem .8rem; vertical-align: top; }
+  tr:nth-child(even) td { background: #f7f9fc; }
+  code {
+    background: #f0f0f0;
+    border-radius: 3px;
+    padding: .1em .4em;
+    font-size: .9em;
+  }
+  blockquote {
+    border-left: 4px solid #ccc;
+    margin: .5rem 0;
+    padding: .4rem 1rem;
+    color: #555;
+    background: #f9f9f9;
+  }
+  strong { color: #1e3a5f; }
+  hr { border: none; border-top: 1px solid #ddd; margin: 2rem 0; }
+  p { margin: .5rem 0; }
+  ul, ol { margin: .5rem 0; padding-left: 1.5rem; }
+  .footer { margin-top: 3rem; font-size: .8rem; color: #888; }
+</style>
+</head>
+<body>
+<h1 id="qa実行サマリレポート">QA実行サマリレポート</h1>
+<p><strong>生成日時:</strong> 2026-05-12T05:01:03.191Z<br><strong>実行セット:</strong> 2026-05-release</p>
+<h2 id="実行統計">実行統計</h2>
+<table>
+<thead>
+<tr>
+<th align="left">項目</th>
+<th align="right">件数</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">総件数</td>
+<td align="right"><strong>6</strong></td>
+</tr>
+<tr>
+<td align="left">✅ PASS</td>
+<td align="right">2</td>
+</tr>
+<tr>
+<td align="left">❌ FAIL</td>
+<td align="right">1</td>
+</tr>
+<tr>
+<td align="left">⏭ SKIP</td>
+<td align="right">1</td>
+</tr>
+<tr>
+<td align="left">⬜ 未実施</td>
+<td align="right">2</td>
+</tr>
+</tbody></table>
+<p><strong>Pass率: 🔴 50%</strong> (実施済み 4 件中 2 件合格)</p>
+<h2 id="高優先度fail">高優先度FAIL</h2>
+<ul>
+<li><a href="../../master/testcases/AUTH/AUTH-002.md">AUTH-002</a></li>
+</ul>
+<h2 id="fail一覧">FAIL一覧</h2>
+<table>
+<thead>
+<tr>
+<th align="left">ID</th>
+<th align="left">タイトル</th>
+<th align="left">優先度</th>
+<th align="left">担当者</th>
+<th align="left">不具合ID</th>
+<th align="left">メモ</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left"><a href="../../master/testcases/AUTH/AUTH-002.md">AUTH-002</a></td>
+<td align="left">誤パスワードによるログイン失敗</td>
+<td align="left">high</td>
+<td align="left">onawa</td>
+<td align="left"><code>BUG-192</code></td>
+<td align="left">パスワード試行失敗カウントがインクリメントされない不具合</td>
+</tr>
+</tbody></table>
+<hr>
+<p><em>このレポートは <a href="../../README.md">QA Test Management System</a> により自動生成されました。</em></p>
+
+</body>
+</html>
