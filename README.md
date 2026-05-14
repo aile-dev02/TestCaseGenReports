@@ -293,11 +293,6 @@ import type { ResultsFile } from '../schemas/results.js'
 // Playwright の JSON Reporter 出力を results.yml に変換するスクリプトをここに実装
 ```
 
-### Jira / Xray 連携
-
-`scripts/lib/` に `jira-client.ts` を追加し、`generate-summary.ts` から呼び出して  
-FAIL 時に自動でバグチケットを起票できます。
-
 ### HTML レポート生成
 
 ```bash
