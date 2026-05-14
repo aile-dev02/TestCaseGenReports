@@ -111,10 +111,10 @@ function addTestCaseListSheet(
     { header: '前提条件', key: '前提条件', width: 42 },
     { header: '手順', key: 'steps', width: 52 },
     { header: '期待結果', key: 'expectedResults', width: 52 },
-    { header: '実行ステータス', key: 'status', width: 16 },
+    { header: 'メモ', key: 'メモ', width: 40 },
     { header: '担当者', key: '担当者', width: 14 },
     { header: '完了日時', key: '完了日時', width: 22 },
-    { header: 'メモ', key: 'メモ', width: 40 },
+    { header: '実行ステータス', key: 'status', width: 16 },
   ]
 
   applyHeaderStyle(ws.getRow(1))
