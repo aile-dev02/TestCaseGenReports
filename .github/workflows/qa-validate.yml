@@ -1,8 +1,5 @@
 name: QAバリデーション
 
-# Runs on every push that touches test cases or schemas, and on all PRs.
-# Blocks merging if any test case fails validation.
-
 on:
   push:
     paths:

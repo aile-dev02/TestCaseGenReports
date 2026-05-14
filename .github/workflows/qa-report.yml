@@ -29,26 +29,21 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      # ── Checkout ────────────────────────────────────────
       - name: チェックアウト
         uses: actions/checkout@v4
 
-      # ── Node.js setup ───────────────────────────────────
       - name: Node.js 20環境のセットアップ
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
-      # ── Dependencies ────────────────────────────────────
       - name: 依存関係をインストール
         run: npm ci
 
-      # ── Validate ────────────────────────────────────────
       - name: テストケースをバリデーション
         run: npm run validate
 
-      # ── Generate reports ────────────────────────────────
       - name: Excelレポートを生成
         run: npm run generate:excel
 
@@ -58,7 +53,6 @@ jobs:
       - name: トレーサビリティマトリクスを生成
         run: npm run generate:traceability
 
-      # ── Summarise in GitHub Actions ──────────────────────
       - name: レポート概要をGitHub Actionsのサマリーに出力
         run: |
           echo "## QA Report Summary" >> $GITHUB_STEP_SUMMARY
@@ -72,7 +66,6 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           cat reports/latest/qa-summary.md >> $GITHUB_STEP_SUMMARY
 
-      # ── Upload artifacts ────────────────────────────────
       - name: QAレポートをアップロード
         uses: actions/upload-artifact@v4
         with:
