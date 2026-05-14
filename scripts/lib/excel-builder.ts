@@ -6,10 +6,8 @@
  *
  * シート構成
  * ──────────
- *   1. テストケース一覧        – 全テストケースと最新実行ステータス
- *   2. 要件別テストケース       – 要件 ID ごとにグループ化
- *   3. 実行結果               – 実行詳細（担当者・エビデンス・不具合等）
- *   4. FAIL一覧               – FAIL のみ抽出（トリアージ用）
+ *   1. テストケース一覧        – 全テストケースと最新実行ステータス・担当者・完了日時・メモ
+ *   2. FAIL一覧               – FAIL のみ抽出（トリアージ用）
  */
 
 import ExcelJS from 'exceljs'
@@ -114,10 +112,13 @@ function addTestCaseListSheet(
     { header: '手順', key: 'steps', width: 52 },
     { header: '期待結果', key: 'expectedResults', width: 52 },
     { header: '実行ステータス', key: 'status', width: 16 },
+    { header: '担当者', key: '担当者', width: 14 },
+    { header: '完了日時', key: '完了日時', width: 22 },
+    { header: 'メモ', key: 'メモ', width: 40 },
   ]
 
   applyHeaderStyle(ws.getRow(1))
-  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 10 } }
+  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 13 } }
 
   testCases.forEach((tc, idx) => {
     const result = results.get(tc.frontmatter.id)
@@ -134,6 +135,9 @@ function addTestCaseListSheet(
       steps: tc.steps.map((s, i) => `${i + 1}. ${s}`).join('\n'),
       expectedResults: tc.expectedResults.map((r) => `• ${r}`).join('\n'),
       status,
+      '担当者': result?.担当者 ?? '',
+      '完了日時': result?.完了日時 ?? '',
+      'メモ': result?.メモ ?? '',
     })
 
     applyDataRowStyle(row, idx % 2 === 1)
@@ -146,7 +150,7 @@ function addTestCaseListSheet(
   // 条件付き書式（直接スタイルに加えて視覚的フィードバックを追加）
   const lastRow = Math.max(testCases.length + 1, 2)
   ws.addConditionalFormatting({
-    ref: `J2:J${lastRow}`,
+    ref: `J2:J${lastRow}`,  // 実行ステータス列
     rules: [
       {
         type: 'containsText',
@@ -163,115 +167,7 @@ function addTestCaseListSheet(
 }
 
 // ─────────────────────────────────────────────
-// Sheet 2 – 要件別テストケース
-// ─────────────────────────────────────────────
-
-function addByRequirementSheet(
-  wb: ExcelJS.Workbook,
-  testCases: ParsedTestCase[],
-  results: Map<string, TestResult>,
-): void {
-  const ws = wb.addWorksheet('要件別テストケース', {
-    views: [{ state: 'frozen', xSplit: 0, ySplit: 1 }],
-  })
-
-  ws.columns = [
-    { header: '要件ID', key: '要件ID', width: 16 },
-    { header: 'テストケースID', key: 'id', width: 14 },
-    { header: 'タイトル', key: 'タイトル', width: 36 },
-    { header: '優先度', key: '優先度', width: 10 },
-    { header: 'タイプ', key: 'タイプ', width: 13 },
-    { header: '実行ステータス', key: 'status', width: 16 },
-  ]
-
-  applyHeaderStyle(ws.getRow(1))
-  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 6 } }
-
-  // 要件 ID でグループ化（複数要件IDを持つ場合はそれぞれの行に出現）
-  const grouped = new Map<string, ParsedTestCase[]>()
-  for (const tc of testCases) {
-    const reqIds =
-      tc.frontmatter.要件ID && tc.frontmatter.要件ID.length > 0
-        ? tc.frontmatter.要件ID
-        : ['(要件なし)']
-    for (const reqId of reqIds) {
-      if (!grouped.has(reqId)) grouped.set(reqId, [])
-      grouped.get(reqId)!.push(tc)
-    }
-  }
-
-  let idx = 0
-  for (const [reqId, tcs] of [...grouped.entries()].sort()) {
-    for (const tc of tcs) {
-      const status = results.get(tc.frontmatter.id)?.ステータス ?? 'NOT_EXECUTED'
-      const row = ws.addRow({
-        '要件ID': reqId,
-        id: tc.frontmatter.id,
-        'タイトル': tc.frontmatter.タイトル,
-        '優先度': tc.frontmatter.優先度,
-        'タイプ': tc.frontmatter.タイプ,
-        status,
-      })
-      applyDataRowStyle(row, idx % 2 === 1)
-      applyStatusStyle(row.getCell('status'), status)
-      applyPriorityStyle(row.getCell('優先度'), tc.frontmatter.優先度)
-      idx++
-    }
-  }
-}
-
-// ─────────────────────────────────────────────
-// Sheet 3 – 実行結果
-// ─────────────────────────────────────────────
-
-function addExecutionResultsSheet(
-  wb: ExcelJS.Workbook,
-  testCases: ParsedTestCase[],
-  results: Map<string, TestResult>,
-): void {
-  const ws = wb.addWorksheet('実行結果', {
-    views: [{ state: 'frozen', xSplit: 0, ySplit: 1 }],
-  })
-
-  ws.columns = [
-    { header: 'ID', key: 'id', width: 14 },
-    { header: 'タイトル', key: 'タイトル', width: 36 },
-    { header: '優先度', key: '優先度', width: 10 },
-    { header: '実行ステータス', key: 'status', width: 16 },
-    { header: '担当者', key: '担当者', width: 14 },
-    { header: '完了日時', key: '完了日時', width: 22 },
-    { header: 'エビデンス', key: 'エビデンス', width: 40 },
-    { header: '不具合ID', key: '不具合', width: 14 },
-    { header: 'メモ', key: 'メモ', width: 40 },
-  ]
-
-  applyHeaderStyle(ws.getRow(1))
-  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 9 } }
-
-  testCases.forEach((tc, idx) => {
-    const result = results.get(tc.frontmatter.id)
-    const status = result?.ステータス ?? 'NOT_EXECUTED'
-
-    const row = ws.addRow({
-      id: tc.frontmatter.id,
-      'タイトル': tc.frontmatter.タイトル,
-      '優先度': tc.frontmatter.優先度,
-      status,
-      '担当者': result?.担当者 ?? '',
-      '完了日時': result?.完了日時 ?? '',
-      'エビデンス': (result?.エビデンス ?? []).join('\n'),
-      '不具合': result?.不具合 ?? '',
-      'メモ': result?.メモ ?? '',
-    })
-
-    applyDataRowStyle(row, idx % 2 === 1)
-    applyStatusStyle(row.getCell('status'), status)
-    applyPriorityStyle(row.getCell('優先度'), tc.frontmatter.優先度)
-  })
-}
-
-// ─────────────────────────────────────────────
-// Sheet 4 – FAIL一覧
+// Sheet 2 – FAIL一覧
 // ─────────────────────────────────────────────
 
 function addFailListSheet(
@@ -350,8 +246,6 @@ export async function buildExcel(
   wb.modified = new Date()
 
   addTestCaseListSheet(wb, testCases, results)
-  addByRequirementSheet(wb, testCases, results)
-  addExecutionResultsSheet(wb, testCases, results)
   addFailListSheet(wb, testCases, results)
 
   await wb.xlsx.writeFile(outputPath)
