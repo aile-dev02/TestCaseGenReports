@@ -12,7 +12,7 @@ import { dirname, join, relative } from 'path'
 import { fileURLToPath } from 'url'
 import { writeFileSync } from 'fs'
 import {
-  loadTestCases,
+  loadAllTestCaseRows,
   loadLatestResults,
   latestRunId,
   ensureDir,
@@ -23,11 +23,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT_DIR = join(__dirname, '..')
 const REPORTS_DIR = join(ROOT_DIR, 'reports', 'latest')
 
-// ─────────────────────────────────────────────
-// リンク生成（reports/latest/ を起点とした相対パス）
-// ─────────────────────────────────────────────
-
-function tcLink(id: string, filePath: string): string {
+function specLink(id: string, filePath: string): string {
   const rel = relative(REPORTS_DIR, filePath).replace(/\\/g, '/')
   return `[${id}](${rel})`
 }
@@ -37,19 +33,17 @@ function tcLink(id: string, filePath: string): string {
 // ─────────────────────────────────────────────
 
 function computeSummary(): QASummary {
-  const testCases = loadTestCases(ROOT_DIR)
+  const allRows = loadAllTestCaseRows(ROOT_DIR)
   const results = loadLatestResults(ROOT_DIR)
 
   let pass = 0
   let fail = 0
   let skip = 0
   let notExecuted = 0
-
-  const highPriorityFails: string[] = []
   const failList: FailEntry[] = []
 
-  for (const tc of testCases) {
-    const result = results.get(tc.frontmatter.id)
+  for (const row of allRows) {
+    const result = results.get(row.id)
     const status = result?.ステータス ?? 'NOT_EXECUTED'
 
     if (status === 'PASS') pass++
@@ -58,17 +52,15 @@ function computeSummary(): QASummary {
     else notExecuted++
 
     if (status === 'FAIL') {
-      if (tc.frontmatter.優先度 === 'high') {
-        highPriorityFails.push(tc.frontmatter.id)
-      }
       failList.push({
-        id: tc.frontmatter.id,
-        title: tc.frontmatter.タイトル,
-        priority: tc.frontmatter.優先度,
+        id: row.id,
+        テスト名: row.テスト名,
+        種別: row.種別,
+        上流ID: row.上流ID ?? '',
         assignee: result?.担当者,
         bug: result?.不具合,
         notes: result?.メモ,
-        filePath: tc.filePath,
+        specFilePath: row.specFilePath,
       })
     }
   }
@@ -79,13 +71,12 @@ function computeSummary(): QASummary {
   return {
     runId: latestRunId(ROOT_DIR),
     generatedAt: new Date().toISOString(),
-    total: testCases.length,
+    total: allRows.length,
     pass,
     fail,
     skip,
     notExecuted,
     passRate,
-    highPriorityFails,
     failList,
   }
 }
@@ -102,9 +93,6 @@ function passRateEmoji(rate: number): string {
 
 function renderMarkdown(s: QASummary): string {
   const lines: string[] = []
-
-  // failList から id → filePath のマップを構築（高優先度FAILリンク生成に使用）
-  const failPathMap = new Map(s.failList.map((f) => [f.id, f.filePath]))
 
   lines.push('# QA実行サマリレポート')
   lines.push('')
@@ -127,31 +115,20 @@ function renderMarkdown(s: QASummary): string {
   )
   lines.push('')
 
-  lines.push('## 高優先度FAIL')
-  lines.push('')
-  if (s.highPriorityFails.length === 0) {
-    lines.push('> 高優先度のFAILはありません。')
-  } else {
-    for (const id of s.highPriorityFails) {
-      const fp = failPathMap.get(id) ?? ''
-      lines.push(`- ${tcLink(id, fp)}`)
-    }
-  }
-  lines.push('')
-
   lines.push('## FAIL一覧')
   lines.push('')
 
   if (s.failList.length === 0) {
     lines.push('> FAILはありません。')
   } else {
-    lines.push('| ID | タイトル | 優先度 | 担当者 | 不具合ID | メモ |')
-    lines.push('|:---|:--------|:-------|:-------|:---------|:-----|')
+    lines.push('| TC-ID | テスト名 | 種別 | 上流ID | 担当者 | 不具合ID | メモ |')
+    lines.push('|:------|:--------|:-----|:-------|:-------|:---------|:-----|')
     for (const f of s.failList) {
       const row = [
-        tcLink(f.id, f.filePath),
-        f.title,
-        f.priority,
+        specLink(f.id, f.specFilePath),
+        f.テスト名,
+        f.種別,
+        f.上流ID,
         f.assignee ?? '',
         f.bug ? `\`${f.bug}\`` : '',
         f.notes ?? '',

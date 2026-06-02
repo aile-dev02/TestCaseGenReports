@@ -1,12 +1,12 @@
 /**
- * CLI: master/testcases/ 以下の全 Markdown テストケースを検証する。
+ * CLI: master/specs/ 以下の全テスト仕様書を検証する。
  *
  * チェック内容:
- *   1. FrontMatter スキーマ（Zod）— 必須フィールド不足・型不正
- *   2. ID 重複
- *   3. 要件ID 未設定
- *   4. # 手順 セクションが空または欠落
- *   5. # 期待結果 セクションが空または欠落
+ *   1. メタデータ必須フィールド（案件名 / 案件タイプ / 作成日 / バージョン）
+ *   2. TC-ID フォーマット（TC-NNN 形式）
+ *   3. TC-ID 重複（スペック間を含む）
+ *   4. 手順・期待結果が空でないこと
+ *   5. 上流ID フォーマット（DD-NNN 形式、記載がある場合）
  *
  * 終了コード: 0 = OK、1 = エラーあり
  *
@@ -17,8 +17,8 @@
 
 import { dirname, join, relative } from 'path'
 import { fileURLToPath } from 'url'
-import { loadTestCases } from './lib/loader.js'
-import { TestCaseFrontmatterSchema } from '../schemas/testcase.js'
+import { loadTestSpecs } from './lib/loader.js'
+import { TestSpecMetadataSchema, TestCaseRowSchema } from '../schemas/testspec.js'
 import type { ValidationError } from './lib/types.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -30,90 +30,111 @@ function rel(filePath: string): string {
 
 function run(): void {
   console.log('╔══════════════════════════════════════╗')
-  console.log('║  QA テストケース バリデーター         ║')
+  console.log('║  QA テスト仕様書 バリデーター          ║')
   console.log('╚══════════════════════════════════════╝\n')
 
-  const testCases = loadTestCases(ROOT_DIR)
+  const specs = loadTestSpecs(ROOT_DIR)
 
-  if (testCases.length === 0) {
-    console.warn('⚠  master/testcases/ にテストケースが見つかりません')
+  if (specs.length === 0) {
+    console.warn('⚠  master/specs/ にテスト仕様書が見つかりません')
     console.warn('   .md ファイルを1件以上作成してください。\n')
     process.exit(0)
   }
 
-  console.log(`${testCases.length} 件のテストケースを検証中...\n`)
+  const totalTCs = specs.reduce((n, s) => n + s.testCases.length, 0)
+  console.log(`${specs.length} 件の仕様書（計 ${totalTCs} TC）を検証中...\n`)
 
   const errors: ValidationError[] = []
 
-  // ── 1. スキーマ検証 ────────────────────────
-  for (const tc of testCases) {
-    const result = TestCaseFrontmatterSchema.safeParse(tc.frontmatter)
+  // ── 1. メタデータ必須フィールド ────────────
+  for (const spec of specs) {
+    const result = TestSpecMetadataSchema.safeParse(spec.metadata)
     if (!result.success) {
       for (const issue of result.error.issues) {
         errors.push({
-          file: rel(tc.filePath),
-          errorType: 'SCHEMA_ERROR',
+          file: rel(spec.filePath),
+          errorType: 'METADATA_ERROR',
           message: `[${issue.path.join('.') || 'root'}] ${issue.message}`,
         })
       }
     }
   }
 
-  // ── 2. ID 重複チェック ─────────────────────
+  // ── 2. TC-ID フォーマット & フィールド検証 ─
+  for (const spec of specs) {
+    for (const tc of spec.testCases) {
+      const result = TestCaseRowSchema.safeParse(tc)
+      if (!result.success) {
+        for (const issue of result.error.issues) {
+          errors.push({
+            file: rel(spec.filePath),
+            errorType: 'TC_SCHEMA_ERROR',
+            message: `[${tc.id ?? '?'}][${issue.path.join('.') || 'root'}] ${issue.message}`,
+          })
+        }
+      }
+    }
+  }
+
+  // ── 3. TC-ID 重複チェック ─────────────────
   const idMap = new Map<string, string[]>()
-  for (const tc of testCases) {
-    const id = tc.frontmatter.id ?? '(id なし)'
-    if (!idMap.has(id)) idMap.set(id, [])
-    idMap.get(id)!.push(rel(tc.filePath))
+  for (const spec of specs) {
+    for (const tc of spec.testCases) {
+      const id = tc.id ?? '(id なし)'
+      if (!idMap.has(id)) idMap.set(id, [])
+      idMap.get(id)!.push(rel(spec.filePath))
+    }
   }
   for (const [id, files] of idMap) {
     if (files.length > 1) {
-      for (const file of files) {
+      const unique = [...new Set(files)]
+      for (const file of unique) {
         errors.push({
           file,
           errorType: 'DUPLICATE_ID',
-          message: `ID "${id}" が複数のファイルに存在します: ${files.join(', ')}`,
+          message: `TC-ID "${id}" が複数箇所に存在します: ${files.join(', ')}`,
         })
       }
     }
   }
 
-  // ── 3. 要件ID 未設定 ──────────────────────
-  for (const tc of testCases) {
-    if (!tc.frontmatter.要件ID || tc.frontmatter.要件ID.length === 0) {
-      errors.push({
-        file: rel(tc.filePath),
-        errorType: 'MISSING_要件ID',
-        message: `"${tc.frontmatter.id ?? '?'}" に 要件ID フィールドがありません — REQ-CATEGORY-NNN をリスト形式で設定してください`,
-      })
+  // ── 4. 手順・期待結果 空チェック ──────────
+  for (const spec of specs) {
+    for (const tc of spec.testCases) {
+      if (!tc.手順 || tc.手順.trim() === '') {
+        errors.push({
+          file: rel(spec.filePath),
+          errorType: 'MISSING_手順',
+          message: `"${tc.id ?? '?'}" — 手順が空です`,
+        })
+      }
+      if (!tc.期待結果 || tc.期待結果.trim() === '') {
+        errors.push({
+          file: rel(spec.filePath),
+          errorType: 'MISSING_期待結果',
+          message: `"${tc.id ?? '?'}" — 期待結果が空です`,
+        })
+      }
     }
   }
 
-  // ── 4. 手順セクション空 ───────────────────
-  for (const tc of testCases) {
-    if (tc.steps.length === 0) {
-      errors.push({
-        file: rel(tc.filePath),
-        errorType: 'MISSING_手順',
-        message: `"${tc.frontmatter.id ?? '?'}" — # 手順 セクションがないか、リスト項目がありません`,
-      })
-    }
-  }
-
-  // ── 5. 期待結果セクション空 ───────────────
-  for (const tc of testCases) {
-    if (tc.expectedResults.length === 0) {
-      errors.push({
-        file: rel(tc.filePath),
-        errorType: 'MISSING_期待結果',
-        message: `"${tc.frontmatter.id ?? '?'}" — # 期待結果 セクションがないか、リスト項目がありません`,
-      })
+  // ── 5. 上流ID フォーマット ─────────────────
+  const ddPattern = /^DD-\d+$/
+  for (const spec of specs) {
+    for (const tc of spec.testCases) {
+      if (tc.上流ID && !ddPattern.test(tc.上流ID)) {
+        errors.push({
+          file: rel(spec.filePath),
+          errorType: 'INVALID_上流ID',
+          message: `"${tc.id}" — 上流ID "${tc.上流ID}" は DD-NNN 形式ではありません`,
+        })
+      }
     }
   }
 
   // ── レポート ──────────────────────────────
   if (errors.length === 0) {
-    console.log(`✅  全 ${testCases.length} 件のテストケースがバリデーションを通過しました。\n`)
+    console.log(`✅  全 ${totalTCs} TC のバリデーションを通過しました。\n`)
     process.exit(0)
   }
 

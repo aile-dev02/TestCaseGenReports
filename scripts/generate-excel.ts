@@ -1,16 +1,16 @@
 /**
- * CLI: generate the QA Excel workbook.
+ * CLI: QA Excel ワークブックを生成する。
  *
- * Output: reports/latest/test-report.xlsx
+ * 出力先: reports/latest/test-report.xlsx
  *
- * Usage:
+ * 使用方法:
  *   npm run generate:excel
  *   tsx scripts/generate-excel.ts
  */
 
 import { dirname, join } from 'path'
 import { fileURLToPath } from 'url'
-import { loadTestCases, loadLatestResults, ensureDir } from './lib/loader.js'
+import { loadAllTestCaseRows, loadLatestResults, ensureDir } from './lib/loader.js'
 import { buildExcel } from './lib/excel-builder.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -21,7 +21,7 @@ async function main(): Promise<void> {
   console.log('─'.repeat(40))
 
   console.log('\n1/3 Loading test cases...')
-  const testCases = loadTestCases(ROOT_DIR)
+  const testCases = loadAllTestCaseRows(ROOT_DIR)
   console.log(`     → ${testCases.length} test case(s) found`)
 
   console.log('2/3 Loading execution results...')
@@ -36,7 +36,7 @@ async function main(): Promise<void> {
   await buildExcel(testCases, results, outputPath)
 
   console.log(`\n✅  Saved: ${outputPath}`)
-  console.log('   Sheets: テストケース一覧 / 要件別テストケース / 実行結果 / FAIL一覧\n')
+  console.log('   Sheets: テストケース一覧 / FAIL一覧\n')
 }
 
 main().catch((err: unknown) => {

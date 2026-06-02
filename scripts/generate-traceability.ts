@@ -5,26 +5,29 @@
  *   reports/latest/traceability.md    — Markdown 版
  *   reports/latest/traceability.xlsx  — Excel 版
  *
- * マトリクス構造: 要件 → テストケース → 実行結果
+ * マトリクス構造: 上流設計書 DD-xxx → テストケース TC-xxx → 実行結果
  *
  * 使用方法:
  *   npm run generate:traceability
  *   tsx scripts/generate-traceability.ts
  */
 
-import { dirname, join, relative } from 'path'
+import { dirname, join } from 'path'
 import { fileURLToPath } from 'url'
 import { writeFileSync } from 'fs'
 import ExcelJS from 'exceljs'
 import {
-  loadTestCases,
-  loadRequirements,
+  loadTestSpecs,
   loadLatestResults,
   latestRunId,
   ensureDir,
 } from './lib/loader.js'
-import type { TraceabilityRow, TraceabilityMatrix } from './lib/types.js'
-import type { ParsedTestCase, ParsedRequirement } from './lib/types.js'
+import type {
+  ParsedTestSpec,
+  TraceabilityRow,
+  TraceabilityMatrix,
+  TestCaseRow,
+} from './lib/types.js'
 import type { TestResult } from '../schemas/results.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -32,81 +35,68 @@ const ROOT_DIR = join(__dirname, '..')
 const REPORTS_DIR = join(ROOT_DIR, 'reports', 'latest')
 
 // ─────────────────────────────────────────────
-// リンク生成（reports/latest/ を起点とした相対パス）
-// ─────────────────────────────────────────────
-
-function tcLink(id: string, filePath: string): string {
-  if (id.startsWith('(')) return id
-  const rel = relative(REPORTS_DIR, filePath).replace(/\\/g, '/')
-  return `[${id}](${rel})`
-}
-
-function reqLink(id: string, filePath: string): string {
-  if (id.startsWith('(')) return id
-  const rel = relative(REPORTS_DIR, filePath).replace(/\\/g, '/')
-  return `[${id}](${rel})`
-}
-
-// ─────────────────────────────────────────────
 // マトリクス構築
 // ─────────────────────────────────────────────
 
 function buildMatrix(
-  requirements: ParsedRequirement[],
-  testCases: ParsedTestCase[],
+  specs: ParsedTestSpec[],
   results: Map<string, TestResult>,
 ): TraceabilityMatrix {
+  // 上流マッピングと TC を収集
+  const upstreamMap = new Map<string, { 機能名: string; tcIds: string[] }>()
+  const tcMap = new Map<string, TestCaseRow>()
+
+  for (const spec of specs) {
+    for (const m of spec.upstreamMappings) {
+      upstreamMap.set(m.上流ID, { 機能名: m.機能名, tcIds: m.展開先TCIDs })
+    }
+    for (const tc of spec.testCases) {
+      tcMap.set(tc.id, tc)
+    }
+  }
+
   const rows: TraceabilityRow[] = []
-  const coveredReqIds = new Set<string>()
+  const covered上流IDs = new Set<string>()
 
-  for (const req of requirements) {
-    // 要件IDが配列になったため includes で照合
-    const linked = testCases.filter(
-      (tc) => tc.frontmatter.要件ID?.includes(req.frontmatter.id),
-    )
-
-    if (linked.length === 0) {
+  for (const [上流ID, { 機能名, tcIds }] of upstreamMap) {
+    if (tcIds.length === 0) {
       rows.push({
-        requirementId: req.frontmatter.id,
-        requirementTitle: req.frontmatter.タイトル,
-        requirementFilePath: req.filePath,
-        testCaseId: '(テストケースなし)',
+        上流ID,
+        機能名,
+        testCaseId: '(TCなし)',
         testCaseTitle: '',
-        testCaseFilePath: '',
-        priority: '',
+        種別: '',
         status: 'NOT_COVERED',
       })
     } else {
-      coveredReqIds.add(req.frontmatter.id)
-      for (const tc of linked) {
+      covered上流IDs.add(上流ID)
+      for (const tcId of tcIds) {
+        const tc = tcMap.get(tcId)
         rows.push({
-          requirementId: req.frontmatter.id,
-          requirementTitle: req.frontmatter.タイトル,
-          requirementFilePath: req.filePath,
-          testCaseId: tc.frontmatter.id,
-          testCaseTitle: tc.frontmatter.タイトル,
-          testCaseFilePath: tc.filePath,
-          priority: tc.frontmatter.優先度,
-          status: results.get(tc.frontmatter.id)?.ステータス ?? 'NOT_EXECUTED',
+          上流ID,
+          機能名,
+          testCaseId: tcId,
+          testCaseTitle: tc?.テスト名 ?? '(未定義)',
+          種別: tc?.種別 ?? '',
+          status: results.get(tcId)?.ステータス ?? 'NOT_EXECUTED',
         })
       }
     }
   }
 
-  // どの既知要件にも紐づかないテストケース
-  const knownReqIds = new Set(requirements.map((r) => r.frontmatter.id))
-  for (const tc of testCases) {
-    const hasKnownReq = tc.frontmatter.要件ID?.some((id) => knownReqIds.has(id))
-    if (!hasKnownReq) {
+  // 上流マッピングに紐づかない TC
+  for (const [tcId, tc] of tcMap) {
+    const isReferenced = [...upstreamMap.values()].some((m) =>
+      m.tcIds.includes(tcId),
+    )
+    if (!isReferenced) {
       rows.push({
-        requirementId: tc.frontmatter.要件ID?.join(', ') ?? '(要件なし)',
-        requirementTitle: '',
-        requirementFilePath: '',
-        testCaseId: tc.frontmatter.id,
-        testCaseTitle: tc.frontmatter.タイトル,
-        testCaseFilePath: tc.filePath,
-        priority: tc.frontmatter.優先度,
-        status: results.get(tc.frontmatter.id)?.ステータス ?? 'NOT_EXECUTED',
+        上流ID: tc.上流ID ?? '(上流ID未設定)',
+        機能名: '',
+        testCaseId: tcId,
+        testCaseTitle: tc.テスト名,
+        種別: tc.種別,
+        status: results.get(tcId)?.ステータス ?? 'NOT_EXECUTED',
       })
     }
   }
@@ -114,12 +104,12 @@ function buildMatrix(
   return {
     rows,
     summary: {
-      totalRequirements: requirements.length,
-      coveredRequirements: coveredReqIds.size,
-      totalTestCases: testCases.length,
+      total上流ID: upstreamMap.size,
+      covered上流ID: covered上流IDs.size,
+      totalTestCases: tcMap.size,
       coverageRate:
-        requirements.length > 0
-          ? Math.round((coveredReqIds.size / requirements.length) * 100)
+        upstreamMap.size > 0
+          ? Math.round((covered上流IDs.size / upstreamMap.size) * 100)
           : 0,
     },
   }
@@ -154,31 +144,28 @@ function renderMarkdown(matrix: TraceabilityMatrix, runId: string): string {
   lines.push('')
   lines.push('| 項目 | 値 |')
   lines.push('|:-----|:--|')
-  lines.push(`| 要件総数 | ${summary.totalRequirements} |`)
-  lines.push(`| カバー済み要件 | ${summary.coveredRequirements} |`)
+  lines.push(`| 上流設計書 ID 総数 | ${summary.total上流ID} |`)
+  lines.push(`| カバー済み上流ID | ${summary.covered上流ID} |`)
   lines.push(`| テストケース総数 | ${summary.totalTestCases} |`)
-  lines.push(`| 要件カバレッジ率 | **${summary.coverageRate}%** |`)
+  lines.push(`| 上流IDカバレッジ率 | **${summary.coverageRate}%** |`)
   lines.push('')
 
   lines.push('## マトリクス')
   lines.push('')
   lines.push(
-    '| 要件ID | 要件タイトル | テストケースID | テストケースタイトル | 優先度 | 実行ステータス |',
+    '| 上流ID | 機能名 | TC-ID | テスト名 | 種別 | 実行ステータス |',
   )
   lines.push(
-    '|:-------|:------------|:--------------|:--------------------|:-------|:--------------|',
+    '|:-------|:------|:------|:--------|:-----|:--------------|',
   )
 
-  let lastReqId = ''
+  let last上流ID = ''
   for (const row of matrix.rows) {
-    const reqIdCell =
-      row.requirementId === lastReqId
-        ? ''
-        : reqLink(row.requirementId, row.requirementFilePath)
-    lastReqId = row.requirementId
+    const 上流IDCell = row.上流ID === last上流ID ? '' : row.上流ID
+    last上流ID = row.上流ID
 
     lines.push(
-      `| ${reqIdCell} | ${row.requirementTitle} | ${tcLink(row.testCaseId, row.testCaseFilePath)} | ${row.testCaseTitle} | ${row.priority} | ${statusBadge(row.status)} |`,
+      `| ${上流IDCell} | ${row.機能名} | ${row.testCaseId} | ${row.testCaseTitle} | ${row.種別} | ${statusBadge(row.status)} |`,
     )
   }
   lines.push('')
@@ -210,11 +197,11 @@ async function renderExcel(
   })
 
   ws.columns = [
-    { header: '要件ID', key: 'reqId', width: 16 },
-    { header: '要件タイトル', key: 'reqTitle', width: 30 },
-    { header: 'テストケースID', key: 'tcId', width: 16 },
-    { header: 'テストケースタイトル', key: 'tcTitle', width: 36 },
-    { header: '優先度', key: 'priority', width: 10 },
+    { header: '上流ID', key: '上流ID', width: 12 },
+    { header: '機能名', key: '機能名', width: 28 },
+    { header: 'TC-ID', key: 'tcId', width: 12 },
+    { header: 'テスト名', key: 'tcTitle', width: 40 },
+    { header: '種別', key: '種別', width: 10 },
     { header: '実行ステータス', key: 'status', width: 16 },
   ]
 
@@ -244,11 +231,11 @@ async function renderExcel(
 
   matrix.rows.forEach((row, idx) => {
     const dataRow = ws.addRow({
-      reqId: row.requirementId,
-      reqTitle: row.requirementTitle,
+      '上流ID': row.上流ID,
+      '機能名': row.機能名,
       tcId: row.testCaseId,
       tcTitle: row.testCaseTitle,
-      priority: row.priority,
+      '種別': row.種別,
       status: row.status,
     })
 
@@ -282,14 +269,14 @@ async function renderExcel(
   // カバレッジサマリシート
   const sumWs = wb.addWorksheet('カバレッジサマリ')
   sumWs.columns = [
-    { header: '項目', key: 'label', width: 24 },
+    { header: '項目', key: 'label', width: 28 },
     { header: '値', key: 'value', width: 12 },
   ]
   ;[
-    ['要件総数', matrix.summary.totalRequirements],
-    ['カバー済み要件', matrix.summary.coveredRequirements],
+    ['上流設計書 ID 総数', matrix.summary.total上流ID],
+    ['カバー済み上流ID', matrix.summary.covered上流ID],
     ['テストケース総数', matrix.summary.totalTestCases],
-    ['要件カバレッジ率 (%)', matrix.summary.coverageRate],
+    ['上流IDカバレッジ率 (%)', matrix.summary.coverageRate],
   ].forEach(([label, value]) => {
     sumWs.addRow({ label, value })
   })
@@ -305,16 +292,18 @@ async function main(): Promise<void> {
   console.log('🗺  トレーサビリティ マトリクス ジェネレーター')
   console.log('─'.repeat(40))
 
-  const testCases = loadTestCases(ROOT_DIR)
-  const requirements = loadRequirements(ROOT_DIR)
+  const specs = loadTestSpecs(ROOT_DIR)
   const results = loadLatestResults(ROOT_DIR)
   const runId = latestRunId(ROOT_DIR)
 
-  console.log(`  テストケース : ${testCases.length}`)
-  console.log(`  要件         : ${requirements.length}`)
-  console.log(`  実行結果     : ${results.size}`)
+  const totalTCs = specs.reduce((n, s) => n + s.testCases.length, 0)
+  const totalMappings = specs.reduce((n, s) => n + s.upstreamMappings.length, 0)
+  console.log(`  テスト仕様書   : ${specs.length}`)
+  console.log(`  テストケース   : ${totalTCs}`)
+  console.log(`  上流マッピング : ${totalMappings}`)
+  console.log(`  実行結果       : ${results.size}`)
 
-  const matrix = buildMatrix(requirements, testCases, results)
+  const matrix = buildMatrix(specs, results)
 
   ensureDir(REPORTS_DIR)
 
@@ -327,7 +316,7 @@ async function main(): Promise<void> {
   console.log(`  📊 Excel   : ${xlsxPath}`)
 
   console.log(
-    `\n  カバレッジ: ${matrix.summary.coveredRequirements}/${matrix.summary.totalRequirements} 要件 (${matrix.summary.coverageRate}%)`,
+    `\n  カバレッジ: ${matrix.summary.covered上流ID}/${matrix.summary.total上流ID} 上流ID (${matrix.summary.coverageRate}%)`,
   )
   console.log('\n✅  完了。\n')
 }

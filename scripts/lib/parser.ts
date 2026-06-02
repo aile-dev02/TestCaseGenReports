@@ -1,141 +1,109 @@
-/**
- * Markdown parsing utilities.
- *
- * Uses gray-matter to split FrontMatter from the body, then unified+remark-parse
- * to build an AST and extract structured sections (steps, expected results, etc.).
- */
-
-import matter from 'gray-matter'
-import remarkParse from 'remark-parse'
-import { unified } from 'unified'
-import { visit } from 'unist-util-visit'
-import type { Root, Heading, List, ListItem, Paragraph, Text } from 'mdast'
-import type { Node } from 'unist'
-import type { TestCaseFrontmatter } from '../../schemas/testcase.js'
-import type { RequirementFrontmatter } from '../../schemas/requirement.js'
-import type { ParsedTestCase, ParsedRequirement } from './types.js'
+import type { TestSpecMetadata, TestCaseRow, UpstreamMapping } from '../../schemas/testspec.js'
+import type { ParsedTestSpec } from './types.js'
 
 // ─────────────────────────────────────────────
-// Internal AST helpers
+// MD テーブル パース ヘルパー
 // ─────────────────────────────────────────────
 
-/** Extract all plain-text from a ListItem node */
-function listItemText(item: ListItem): string {
-  const parts: string[] = []
-  visit(item as unknown as Node, 'text', (n) => {
-    parts.push((n as Text).value)
-  })
-  return parts.join(' ').trim()
+/** `| a | b | c |` → `['a', 'b', 'c']` */
+function parseTableRow(line: string): string[] {
+  return line.split('|').slice(1, -1).map((c) => c.trim())
 }
 
+/** セパレータ行（`|---|---|`）を判定する */
+function isSeparatorRow(line: string): boolean {
+  return /^\|[\s|:=-]+\|$/.test(line.trim())
+}
+
+// ─────────────────────────────────────────────
+// 公開パース関数
+// ─────────────────────────────────────────────
+
 /**
- * Walk the AST and collect list items that appear immediately under a heading
- * whose text matches one of the given names.
+ * テスト仕様書 Markdown ファイルをパースする。
  *
- * Supports both Japanese (手順 / 期待結果 / 受入基準) and English aliases so
- * English-first teams can also use the system.
+ * 抽出対象:
+ *   - H1 見出し から 案件名
+ *   - 最初のテーブル（`## 1.` より前）からメタデータ（キー→値）
+ *   - `### 1.1 上流設計書との対応` テーブルから UpstreamMapping[]
+ *   - `## 3. テストケース` テーブルから TestCaseRow[]
  */
-function extractSection(tree: Root, headingNames: string[]): string[] {
-  const items: string[] = []
-  let inSection = false
+export function parseTestSpec(content: string, filePath: string): ParsedTestSpec {
+  const lines = content.split('\n')
 
-  for (const node of tree.children) {
-    // Detect section boundary via h1 heading
-    if (node.type === 'heading' && (node as Heading).depth === 1) {
-      const h = node as Heading
-      const textChild = h.children[0]
-      const headingText =
-        textChild?.type === 'text' ? (textChild as Text).value : ''
-      inSection = headingNames.includes(headingText)
-      continue
-    }
+  // ── 1. 案件名（H1 見出し） ─────────────────
+  const h1Line = lines.find((l) => /^#\s/.test(l))
+  const 案件名 = h1Line
+    ? h1Line.replace(/^#\s+テスト仕様書[：:]\s*/, '').trim()
+    : ''
 
-    if (inSection && node.type === 'list') {
-      for (const item of (node as List).children) {
-        const text = listItemText(item as ListItem)
-        if (text.length > 0) items.push(text)
-      }
+  // ── 2. メタデータテーブル（最初の ## より前） ─
+  const metadataMap: Record<string, string> = {}
+  for (const line of lines) {
+    if (/^##\s/.test(line)) break
+    if (!line.startsWith('|') || isSeparatorRow(line)) continue
+    const cells = parseTableRow(line)
+    if (cells.length >= 2 && cells[0] !== '項目') {
+      metadataMap[cells[0]] = cells[1]
     }
   }
 
-  return items
-}
-
-/** Extract concatenated text of all top-level paragraphs before the first heading */
-function extractLeadParagraphs(tree: Root): string {
-  const parts: string[] = []
-  for (const node of tree.children) {
-    if (node.type === 'heading') break
-    if (node.type === 'paragraph') {
-      const texts: string[] = []
-      visit(node as unknown as Node, 'text', (n) => {
-        texts.push((n as Text).value)
+  // ── 3. 上流設計書との対応テーブル（### 1.1） ─
+  const upstreamMappings: UpstreamMapping[] = []
+  let inSection11 = false
+  for (const line of lines) {
+    if (/^###\s*1\.1/.test(line)) { inSection11 = true; continue }
+    if (inSection11 && (/^###/.test(line) || /^##\s/.test(line))) {
+      inSection11 = false
+    }
+    if (!inSection11 || !line.startsWith('|') || isSeparatorRow(line)) continue
+    const cells = parseTableRow(line)
+    if (cells.length >= 3 && /^DD-/.test(cells[0])) {
+      upstreamMappings.push({
+        上流ID: cells[0],
+        機能名: cells[1],
+        展開先TCIDs: cells[2]
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
       })
-      parts.push(texts.join(''))
     }
   }
-  return parts.join('\n').trim()
-}
 
-// ─────────────────────────────────────────────
-// Public parse functions
-// ─────────────────────────────────────────────
-
-/**
- * Parse a test case Markdown file.
- *
- * @param content  Raw file content (UTF-8)
- * @param filePath Absolute or repo-relative path (used for error messages)
- */
-export function parseTestCase(
-  content: string,
-  filePath: string,
-): ParsedTestCase {
-  const { data, content: body } = matter(content)
-  const tree = unified().use(remarkParse).parse(body) as Root
-
-  return {
-    frontmatter: data as TestCaseFrontmatter,
-    steps: extractSection(tree, ['手順', 'Steps']),
-    expectedResults: extractSection(tree, ['期待結果', 'Expected Results']),
-    filePath,
-    rawContent: content,
+  // ── 4. テストケーステーブル（## 3.） ──────
+  const testCases: TestCaseRow[] = []
+  let inSection3 = false
+  for (const line of lines) {
+    if (/^##\s*3\./.test(line)) { inSection3 = true; continue }
+    if (inSection3 && /^##\s*\d+\./.test(line)) { inSection3 = false }
+    if (!inSection3 || !line.startsWith('|') || isSeparatorRow(line)) continue
+    const cells = parseTableRow(line)
+    // ヘッダー行（TC-ID という文字列を持つ行）はスキップ
+    if (cells[0] === 'TC-ID') continue
+    if (cells.length >= 5 && /^TC-/.test(cells[0])) {
+      testCases.push({
+        id: cells[0],
+        テスト名: cells[1],
+        種別: cells[2],
+        手順: cells[3],
+        期待結果: cells[4],
+        上流ID: cells[5] || undefined,
+        備考: cells[6] || undefined,
+      })
+    }
   }
-}
 
-/**
- * Parse a requirements Markdown file.
- *
- * @param content  Raw file content (UTF-8)
- * @param filePath Absolute or repo-relative path
- */
-export function parseRequirement(
-  content: string,
-  filePath: string,
-): ParsedRequirement {
-  const { data, content: body } = matter(content)
-  const tree = unified().use(remarkParse).parse(body) as Root
-
-  return {
-    frontmatter: data as RequirementFrontmatter,
-    description: extractLeadParagraphs(tree),
-    acceptanceCriteria: extractSection(tree, ['受入基準', 'Acceptance Criteria']),
-    filePath,
+  // ── 5. メタデータオブジェクト組み立て ──────
+  const metadata: TestSpecMetadata = {
+    案件名,
+    案件タイプ: metadataMap['案件タイプ'] ?? '',
+    上流ファイル主: metadataMap['上流ファイル（主）'] || undefined,
+    上流ファイル副: metadataMap['上流ファイル（副）'] || undefined,
+    作成日: metadataMap['作成日'] ?? '',
+    顧客: metadataMap['顧客'] || undefined,
+    自社担当: metadataMap['自社担当'] || undefined,
+    バージョン: metadataMap['バージョン'] ?? '',
   }
-}
 
-// ─────────────────────────────────────────────
-// Structural validation helpers (used by validator)
-// ─────────────────────────────────────────────
-
-/** Return true if the Markdown body contains a recognisable # 手順 heading */
-export function hasStepsSection(content: string): boolean {
-  const { content: body } = matter(content)
-  return /^#\s+(手順|Steps)\s*$/m.test(body)
-}
-
-/** Return true if the Markdown body contains a recognisable # 期待結果 heading */
-export function hasExpectedResultsSection(content: string): boolean {
-  const { content: body } = matter(content)
-  return /^#\s+(期待結果|Expected Results)\s*$/m.test(body)
+  return { metadata, upstreamMappings, testCases, filePath, rawContent: content }
 }
