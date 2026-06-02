@@ -27,26 +27,19 @@ function joinMultilineCells(lines: string[]): string[] {
   const result: string[] = []
   let pending: string | null = null
 
-  function flush(extra?: string): void {
-    if (pending !== null) result.push(pending)
-    pending = null
-    if (extra !== undefined) result.push(extra)
-  }
-
   for (const line of lines) {
     const t = line.trimEnd()
 
     if (t.startsWith('|')) {
-      // 前の pending をフラッシュして新しい行を積む
-      flush()
+      if (pending !== null) result.push(pending)
       pending = t
     } else if (pending !== null) {
       const trimmed = t.trim()
       if (trimmed === '' || trimmed.startsWith('#')) {
-        // 空行・見出しでフラッシュ
-        flush(line)
+        result.push(pending)
+        pending = null
+        result.push(line)
       } else {
-        // 継続行として結合
         pending += '\n' + trimmed
       }
     } else {
@@ -54,7 +47,7 @@ function joinMultilineCells(lines: string[]): string[] {
     }
   }
 
-  flush()
+  if (pending !== null) result.push(pending)
   return result
 }
 
