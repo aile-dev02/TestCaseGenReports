@@ -18,49 +18,43 @@ function isSeparatorRow(line: string): boolean {
 /**
  * テーブルセルにまたがる複数行を結合する。
  *
- * MD テーブルの行が途中で改行されている場合（セル内改行）、
- * 継続行を前の行に `\n` で結合し、1行に収める。
- *
- * 判定ルール:
- *   - `|` で始まらず `|` で終わらない行 → 継続行
- *   - `|` で終わる行 → 行の終端（結合完了）
- *   - 空行 → 強制フラッシュ
+ * `|` で始まる行はすべていったん pending に積み、
+ * 次の `|` 行・空行・見出し行のいずれかが来た時点でフラッシュする。
+ * これにより「最初の行が `|` で終わる空セル」を持つ行も
+ * 完結済みと誤判定せず、継続行を正しく結合できる。
  */
 function joinMultilineCells(lines: string[]): string[] {
   const result: string[] = []
   let pending: string | null = null
 
+  function flush(extra?: string): void {
+    if (pending !== null) result.push(pending)
+    pending = null
+    if (extra !== undefined) result.push(extra)
+  }
+
   for (const line of lines) {
     const t = line.trimEnd()
 
     if (t.startsWith('|')) {
-      if (pending !== null) {
-        result.push(pending)
-        pending = null
-      }
-      if (t.endsWith('|')) {
-        result.push(t)
-      } else {
-        pending = t
-      }
+      // 前の pending をフラッシュして新しい行を積む
+      flush()
+      pending = t
     } else if (pending !== null) {
-      if (t.trim() === '') {
-        result.push(pending)
-        pending = null
-        result.push(line)
+      const trimmed = t.trim()
+      if (trimmed === '' || trimmed.startsWith('#')) {
+        // 空行・見出しでフラッシュ
+        flush(line)
       } else {
-        pending += '\n' + t.trim()
-        if (t.trimEnd().endsWith('|')) {
-          result.push(pending)
-          pending = null
-        }
+        // 継続行として結合
+        pending += '\n' + trimmed
       }
     } else {
       result.push(line)
     }
   }
 
-  if (pending !== null) result.push(pending)
+  flush()
   return result
 }
 
