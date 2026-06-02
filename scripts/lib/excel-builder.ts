@@ -124,7 +124,11 @@ function addTestCaseListSheet(
     applyDataRowStyle(row, idx % 2 === 1)
     applyStatusStyle(row.getCell('status'), status)
 
-    row.height = 20
+    const lineCount = Math.max(
+      tc.手順.split('\n').length,
+      tc.期待結果.split('\n').length,
+    )
+    row.height = Math.max(20, lineCount * 18)
   })
 }
 

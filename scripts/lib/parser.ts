@@ -15,6 +15,55 @@ function isSeparatorRow(line: string): boolean {
   return /^\|[\s|:=-]+\|$/.test(line.trim())
 }
 
+/**
+ * テーブルセルにまたがる複数行を結合する。
+ *
+ * MD テーブルの行が途中で改行されている場合（セル内改行）、
+ * 継続行を前の行に `\n` で結合し、1行に収める。
+ *
+ * 判定ルール:
+ *   - `|` で始まらず `|` で終わらない行 → 継続行
+ *   - `|` で終わる行 → 行の終端（結合完了）
+ *   - 空行 → 強制フラッシュ
+ */
+function joinMultilineCells(lines: string[]): string[] {
+  const result: string[] = []
+  let pending: string | null = null
+
+  for (const line of lines) {
+    const t = line.trimEnd()
+
+    if (t.startsWith('|')) {
+      if (pending !== null) {
+        result.push(pending)
+        pending = null
+      }
+      if (t.endsWith('|')) {
+        result.push(t)
+      } else {
+        pending = t
+      }
+    } else if (pending !== null) {
+      if (t.trim() === '') {
+        result.push(pending)
+        pending = null
+        result.push(line)
+      } else {
+        pending += '\n' + t.trim()
+        if (t.trimEnd().endsWith('|')) {
+          result.push(pending)
+          pending = null
+        }
+      }
+    } else {
+      result.push(line)
+    }
+  }
+
+  if (pending !== null) result.push(pending)
+  return result
+}
+
 // ─────────────────────────────────────────────
 // 公開パース関数
 // ─────────────────────────────────────────────
@@ -29,7 +78,7 @@ function isSeparatorRow(line: string): boolean {
  *   - `## 3. テストケース` テーブルから TestCaseRow[]
  */
 export function parseTestSpec(content: string, filePath: string): ParsedTestSpec {
-  const lines = content.split('\n')
+  const lines = joinMultilineCells(content.split('\n'))
 
   // ── 1. 案件名（H1 見出し） ─────────────────
   const h1Line = lines.find((l) => /^#\s/.test(l))
