@@ -78,7 +78,7 @@ function buildMatrix(
           testCaseId: tcId,
           testCaseTitle: tc?.テスト名 ?? '(未定義)',
           種別: tc?.種別 ?? '',
-          status: results.get(tcId)?.ステータス ?? 'NOT_EXECUTED',
+          status: tc?.実行ステータス ?? 'NOT_EXECUTED',
         })
       }
     }
@@ -96,7 +96,7 @@ function buildMatrix(
         testCaseId: tcId,
         testCaseTitle: tc.テスト名,
         種別: tc.種別,
-        status: results.get(tcId)?.ステータス ?? 'NOT_EXECUTED',
+        status: tc.実行ステータス ?? 'NOT_EXECUTED',
       })
     }
   }

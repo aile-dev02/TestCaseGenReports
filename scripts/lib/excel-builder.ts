@@ -3,8 +3,8 @@
  *
  * シート構成
  * ──────────
- *   1. テストケース一覧  – 全 TC と最新実行ステータス・担当者・完了日時・メモ
- *   2. FAIL一覧         – FAIL のみ抽出（トリアージ用）
+ *   1. テストケース一覧  – 全 TC（MD の値をそのまま使用）
+ *   2. FAIL一覧         – 実行ステータスが FAIL の TC のみ
  */
 
 import ExcelJS from 'exceljs'
@@ -80,7 +80,6 @@ function applyStatusStyle(cell: ExcelJS.Cell, status: string): void {
 function addTestCaseListSheet(
   wb: ExcelJS.Workbook,
   testCases: TestCaseRow[],
-  results: Map<string, TestResult>,
 ): void {
   const ws = wb.addWorksheet('テストケース一覧', {
     views: [{ state: 'frozen', xSplit: 0, ySplit: 1 }],
@@ -96,16 +95,14 @@ function addTestCaseListSheet(
     { header: '備考', key: '備考', width: 28 },
     { header: '担当者', key: '担当者', width: 14 },
     { header: '完了日時', key: '完了日時', width: 22 },
-    { header: 'メモ', key: 'メモ', width: 36 },
     { header: '実行ステータス', key: 'status', width: 16 },
   ]
 
   applyHeaderStyle(ws.getRow(1))
-  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 11 } }
+  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 10 } }
 
   testCases.forEach((tc, idx) => {
-    const result = results.get(tc.id)
-    const status = result?.ステータス ?? 'NOT_EXECUTED'
+    const status = tc.実行ステータス ?? 'NOT_EXECUTED'
 
     const row = ws.addRow({
       id: tc.id,
@@ -115,9 +112,8 @@ function addTestCaseListSheet(
       '期待結果': tc.期待結果,
       '上流ID': tc.上流ID ?? '',
       '備考': tc.備考 ?? '',
-      '担当者': result?.担当者 ?? '',
-      '完了日時': result?.完了日時 ?? '',
-      'メモ': result?.メモ ?? '',
+      '担当者': tc.担当者 ?? '',
+      '完了日時': tc.完了日時 ?? '',
       status,
     })
 
@@ -153,15 +149,12 @@ function addFailListSheet(
     { header: '担当者', key: '担当者', width: 14 },
     { header: '完了日時', key: '完了日時', width: 22 },
     { header: '不具合ID', key: '不具合', width: 14 },
-    { header: 'メモ', key: 'メモ', width: 40 },
   ]
 
   applyHeaderStyle(ws.getRow(1))
-  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 8 } }
+  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 7 } }
 
-  const failCases = testCases.filter(
-    (tc) => results.get(tc.id)?.ステータス === 'FAIL',
-  )
+  const failCases = testCases.filter((tc) => tc.実行ステータス === 'FAIL')
 
   if (failCases.length === 0) {
     const row = ws.addRow({ id: '(FAILなし)', 'テスト名': '' })
@@ -170,16 +163,15 @@ function addFailListSheet(
   }
 
   failCases.forEach((tc, idx) => {
-    const result = results.get(tc.id)!
+    const result = results.get(tc.id)
     const row = ws.addRow({
       id: tc.id,
       'テスト名': tc.テスト名,
       '種別': tc.種別,
       '上流ID': tc.上流ID ?? '',
-      '担当者': result.担当者 ?? '',
-      '完了日時': result.完了日時 ?? '',
-      '不具合': result.不具合 ?? '',
-      'メモ': result.メモ ?? '',
+      '担当者': tc.担当者 ?? '',
+      '完了日時': tc.完了日時 ?? '',
+      '不具合': result?.不具合 ?? '',
     })
     applyDataRowStyle(row, idx % 2 === 1)
     row.eachCell({ includeEmpty: true }, (cell) => {
@@ -196,7 +188,7 @@ function addFailListSheet(
  * QA Excel ワークブックをビルドしてディスクに書き込む。
  *
  * @param testCases  全テストケース行（loadAllTestCaseRows の戻り値）
- * @param results    実行結果マップ（loadLatestResults の戻り値）
+ * @param results    実行結果マップ（FAIL シートの不具合ID 取得用）
  * @param outputPath 出力先 .xlsx ファイルの絶対パス
  */
 export async function buildExcel(
@@ -210,7 +202,7 @@ export async function buildExcel(
   wb.created = new Date()
   wb.modified = new Date()
 
-  addTestCaseListSheet(wb, testCases, results)
+  addTestCaseListSheet(wb, testCases)
   addFailListSheet(wb, testCases, results)
 
   await wb.xlsx.writeFile(outputPath)

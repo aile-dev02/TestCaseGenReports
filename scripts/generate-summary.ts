@@ -43,8 +43,7 @@ function computeSummary(): QASummary {
   const failList: FailEntry[] = []
 
   for (const row of allRows) {
-    const result = results.get(row.id)
-    const status = result?.ステータス ?? 'NOT_EXECUTED'
+    const status = row.実行ステータス ?? 'NOT_EXECUTED'
 
     if (status === 'PASS') pass++
     else if (status === 'FAIL') fail++
@@ -57,9 +56,8 @@ function computeSummary(): QASummary {
         テスト名: row.テスト名,
         種別: row.種別,
         上流ID: row.上流ID ?? '',
-        assignee: result?.担当者,
-        bug: result?.不具合,
-        notes: result?.メモ,
+        assignee: row.担当者,
+        bug: results.get(row.id)?.不具合,
         specFilePath: row.specFilePath,
       })
     }
@@ -121,8 +119,8 @@ function renderMarkdown(s: QASummary): string {
   if (s.failList.length === 0) {
     lines.push('> FAILはありません。')
   } else {
-    lines.push('| TC-ID | テスト名 | 種別 | 上流ID | 担当者 | 不具合ID | メモ |')
-    lines.push('|:------|:--------|:-----|:-------|:-------|:---------|:-----|')
+    lines.push('| TC-ID | テスト名 | 種別 | 上流ID | 担当者 | 不具合ID |')
+    lines.push('|:------|:--------|:-----|:-------|:-------|:---------|')
     for (const f of s.failList) {
       const row = [
         specLink(f.id, f.specFilePath),
@@ -131,7 +129,6 @@ function renderMarkdown(s: QASummary): string {
         f.上流ID,
         f.assignee ?? '',
         f.bug ? `\`${f.bug}\`` : '',
-        f.notes ?? '',
       ]
       lines.push(`| ${row.join(' | ')} |`)
     }

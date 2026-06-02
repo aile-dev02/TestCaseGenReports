@@ -47,7 +47,6 @@ export interface FailEntry {
   上流ID: string
   assignee: string | undefined
   bug: string | undefined
-  notes: string | undefined
   specFilePath: string
 }
 

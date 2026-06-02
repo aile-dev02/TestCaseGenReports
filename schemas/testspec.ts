@@ -21,6 +21,9 @@ export const TestCaseRowSchema = z.object({
   期待結果: z.string().min(1, '期待結果は必須です'),
   上流ID: z.string().optional(),
   備考: z.string().optional(),
+  担当者: z.string().optional(),
+  完了日時: z.string().optional(),
+  実行ステータス: z.enum(['PASS', 'FAIL', 'SKIP', 'NOT_EXECUTED']).optional(),
 })
 
 export const UpstreamMappingSchema = z.object({
