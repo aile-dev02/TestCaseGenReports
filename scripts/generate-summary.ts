@@ -39,6 +39,8 @@ function computeSummary(): QASummary {
   let pass = 0
   let fail = 0
   let skip = 0
+  let na = 0
+  let waiting = 0
   let notExecuted = 0
   const failList: FailEntry[] = []
 
@@ -48,6 +50,8 @@ function computeSummary(): QASummary {
     if (status === 'PASS') pass++
     else if (status === 'FAIL') fail++
     else if (status === 'SKIP') skip++
+    else if (status === 'NA') na++
+    else if (status === 'WAITING') waiting++
     else notExecuted++
 
     if (status === 'FAIL') {
@@ -55,6 +59,7 @@ function computeSummary(): QASummary {
         id: row.id,
         テスト名: row.テスト名,
         種別: row.種別,
+        優先度: row.優先度 ?? '未設定',
         上流ID: row.上流ID ?? '',
         assignee: row.担当者,
         bug: results.get(row.id)?.不具合,
@@ -63,8 +68,9 @@ function computeSummary(): QASummary {
     }
   }
 
-  const executed = pass + fail + skip
+  const executed = pass + fail
   const passRate = executed > 0 ? Math.round((pass / executed) * 100) : 0
+  const executionRate = allRows.length > 0 ? Math.round((executed / allRows.length) * 100) : 0
 
   return {
     runId: latestRunId(ROOT_DIR),
@@ -73,8 +79,12 @@ function computeSummary(): QASummary {
     pass,
     fail,
     skip,
+    na,
+    waiting,
     notExecuted,
+    executed,
     passRate,
+    executionRate,
     failList,
   }
 }
@@ -103,13 +113,19 @@ function renderMarkdown(s: QASummary): string {
   lines.push('| 項目 | 件数 |')
   lines.push('|:-----|-----:|')
   lines.push(`| 総件数 | **${s.total}** |`)
+  lines.push(`| 実行済み（PASS+FAIL） | **${s.executed}** |`)
   lines.push(`| ✅ PASS | ${s.pass} |`)
   lines.push(`| ❌ FAIL | ${s.fail} |`)
-  lines.push(`| ⏭ SKIP | ${s.skip} |`)
-  lines.push(`| ⬜ 未実施 | ${s.notExecuted} |`)
+  lines.push(`| ➖ N/A | ${s.na} |`)
+  lines.push(`| ⬜ 未実行 | ${s.notExecuted} |`)
+  lines.push(`| ⏳ 質問待ち | ${s.waiting} |`)
+  if (s.skip > 0) lines.push(`| ⏭ SKIP | ${s.skip} |`)
   lines.push('')
   lines.push(
-    `**Pass率: ${passRateEmoji(s.passRate)} ${s.passRate}%** (実施済み ${s.pass + s.fail + s.skip} 件中 ${s.pass} 件合格)`,
+    `**実行率: ${s.executionRate}%** (${s.executed} / ${s.total} 件)  `,
+  )
+  lines.push(
+    `**Pass率: ${passRateEmoji(s.passRate)} ${s.passRate}%** (実施済み ${s.executed} 件中 ${s.pass} 件合格)`,
   )
   lines.push('')
 
@@ -119,13 +135,14 @@ function renderMarkdown(s: QASummary): string {
   if (s.failList.length === 0) {
     lines.push('> FAILはありません。')
   } else {
-    lines.push('| TC-ID | テスト名 | 種別 | 上流ID | 担当者 | 不具合ID |')
-    lines.push('|:------|:--------|:-----|:-------|:-------|:---------|')
+    lines.push('| TC-ID | テスト名 | 種別 | 優先度 | 上流ID | 担当者 | 不具合ID |')
+    lines.push('|:------|:--------|:-----|:-------|:-------|:-------|:---------|')
     for (const f of s.failList) {
       const row = [
         specLink(f.id, f.specFilePath),
         f.テスト名,
         f.種別,
+        f.優先度,
         f.上流ID,
         f.assignee ?? '',
         f.bug ? `\`${f.bug}\`` : '',
@@ -164,8 +181,10 @@ function main(): void {
   console.log(`  総件数   : ${summary.total}`)
   console.log(`  PASS     : ${summary.pass}`)
   console.log(`  FAIL     : ${summary.fail}`)
-  console.log(`  SKIP     : ${summary.skip}`)
-  console.log(`  未実施   : ${summary.notExecuted}`)
+  console.log(`  N/A      : ${summary.na}`)
+  console.log(`  未実行   : ${summary.notExecuted}`)
+  console.log(`  質問待ち : ${summary.waiting}`)
+  console.log(`  実行率   : ${summary.executionRate}%`)
   console.log(`  Pass率   : ${summary.passRate}%`)
   console.log(`\n✅  保存先: ${outputPath}\n`)
 }

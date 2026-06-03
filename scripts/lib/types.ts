@@ -34,9 +34,14 @@ export interface QASummary {
   pass: number
   fail: number
   skip: number
+  na: number
+  waiting: number
   notExecuted: number
-  /** Pass率（実施済み件数を分母、0–100） */
+  executed: number
+  /** Pass率（PASS+FAIL を分母、0–100） */
   passRate: number
+  /** 実行率（全件を分母、0–100） */
+  executionRate: number
   failList: FailEntry[]
 }
 
@@ -44,6 +49,7 @@ export interface FailEntry {
   id: string
   テスト名: string
   種別: string
+  優先度: string
   上流ID: string
   assignee: string | undefined
   bug: string | undefined

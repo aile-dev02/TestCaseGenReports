@@ -55,6 +55,9 @@ jobs:
       - name: トレーサビリティマトリクスを生成
         run: npm run generate:traceability
 
+      - name: 管理者向けHTMLレポートを生成
+        run: npm run generate:admin-report
+
       - name: レポート概要をGitHub Actionsのサマリーに出力
         run: |
           echo "## QA Report Summary" >> $GITHUB_STEP_SUMMARY
@@ -62,9 +65,10 @@ jobs:
           echo "| File | Description |" >> $GITHUB_STEP_SUMMARY
           echo "|------|-------------|" >> $GITHUB_STEP_SUMMARY
           echo "| test-report.xlsx | 全テストケース + 実行結果 (Excel) |" >> $GITHUB_STEP_SUMMARY
-          echo "| qa-summary.md | PASS/FAIL/SKIP 集計サマリ |" >> $GITHUB_STEP_SUMMARY
+          echo "| qa-summary.md | PASS/FAIL/N/A/未実行/質問待ち 集計サマリ |" >> $GITHUB_STEP_SUMMARY
           echo "| traceability.md | 要件↔テストケース対応表 |" >> $GITHUB_STEP_SUMMARY
           echo "| traceability.xlsx | トレーサビリティ (Excel) |" >> $GITHUB_STEP_SUMMARY
+          echo "| admin-report.html | 管理者向け進捗ダッシュボード (HTML) |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           cat reports/latest/qa-summary.md >> $GITHUB_STEP_SUMMARY
 

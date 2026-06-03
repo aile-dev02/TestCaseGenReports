@@ -15,7 +15,7 @@ import { z } from 'zod'
 export const TestResultSchema = z.object({
   /** 実行ステータス */
   ステータス: z
-    .enum(['PASS', 'FAIL', 'SKIP', 'NOT_EXECUTED'])
+    .enum(['PASS', 'FAIL', 'SKIP', 'NOT_EXECUTED', 'NA', 'WAITING'])
     .default('NOT_EXECUTED'),
 
   /** テストを実行した担当者 */

@@ -20,10 +20,11 @@ export const TestCaseRowSchema = z.object({
   手順: z.string().min(1, '手順は必須です'),
   期待結果: z.string().min(1, '期待結果は必須です'),
   上流ID: z.string().optional(),
+  優先度: z.string().optional(),
   備考: z.string().optional(),
   担当者: z.string().optional(),
   完了日時: z.string().optional(),
-  実行ステータス: z.enum(['PASS', 'FAIL', 'SKIP', 'NOT_EXECUTED']).optional(),
+  実行ステータス: z.enum(['PASS', 'FAIL', 'SKIP', 'NOT_EXECUTED', 'NA', 'WAITING']).optional(),
 })
 
 export const UpstreamMappingSchema = z.object({

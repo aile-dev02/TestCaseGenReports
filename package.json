@@ -9,7 +9,8 @@
     "generate:summary": "tsx scripts/generate-summary.ts",
     "generate:traceability": "tsx scripts/generate-traceability.ts",
     "generate:html": "tsx scripts/generate-html.ts",
-    "generate:all": "npm run generate:excel && npm run generate:summary && npm run generate:traceability && npm run generate:html",
+    "generate:admin-report": "tsx scripts/generate-admin-report.ts",
+    "generate:all": "npm run generate:excel && npm run generate:summary && npm run generate:traceability && npm run generate:admin-report",
     "ci": "npm run validate && npm run generate:all"
   },
   "dependencies": {

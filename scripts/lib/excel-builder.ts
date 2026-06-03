@@ -89,6 +89,7 @@ function addTestCaseListSheet(
     { header: 'TC-ID', key: 'id', width: 12 },
     { header: 'テスト名', key: 'テスト名', width: 40 },
     { header: '種別', key: '種別', width: 10 },
+    { header: '優先度', key: '優先度', width: 10 },
     { header: '手順', key: '手順', width: 52 },
     { header: '期待結果', key: '期待結果', width: 52 },
     { header: '上流ID', key: '上流ID', width: 12 },
@@ -99,7 +100,7 @@ function addTestCaseListSheet(
   ]
 
   applyHeaderStyle(ws.getRow(1))
-  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 10 } }
+  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 11 } }
 
   testCases.forEach((tc, idx) => {
     const status = tc.実行ステータス ?? 'NOT_EXECUTED'
@@ -108,6 +109,7 @@ function addTestCaseListSheet(
       id: tc.id,
       'テスト名': tc.テスト名,
       '種別': tc.種別,
+      '優先度': tc.優先度 ?? '',
       '手順': tc.手順,
       '期待結果': tc.期待結果,
       '上流ID': tc.上流ID ?? '',
@@ -145,6 +147,7 @@ function addFailListSheet(
     { header: 'TC-ID', key: 'id', width: 12 },
     { header: 'テスト名', key: 'テスト名', width: 40 },
     { header: '種別', key: '種別', width: 10 },
+    { header: '優先度', key: '優先度', width: 10 },
     { header: '上流ID', key: '上流ID', width: 12 },
     { header: '担当者', key: '担当者', width: 14 },
     { header: '完了日時', key: '完了日時', width: 22 },
@@ -152,7 +155,7 @@ function addFailListSheet(
   ]
 
   applyHeaderStyle(ws.getRow(1))
-  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 7 } }
+  ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 8 } }
 
   const failCases = testCases.filter((tc) => tc.実行ステータス === 'FAIL')
 
@@ -168,6 +171,7 @@ function addFailListSheet(
       id: tc.id,
       'テスト名': tc.テスト名,
       '種別': tc.種別,
+      '優先度': tc.優先度 ?? '',
       '上流ID': tc.上流ID ?? '',
       '担当者': tc.担当者 ?? '',
       '完了日時': tc.完了日時 ?? '',
