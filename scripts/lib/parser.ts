@@ -117,7 +117,16 @@ export function parseTestSpec(content: string, filePath: string): ParsedTestSpec
     // ヘッダー行（TC-ID という文字列を持つ行）はスキップ
     if (cells[0] === 'TC-ID') continue
     if (cells.length >= 5 && /^TC-/.test(cells[0])) {
-      const rawStatus = cells[10]?.toUpperCase()
+      const jaStatusMap: Record<string, string> = {
+        '質問待ち': 'WAITING',
+        '未実行': 'NOT_EXECUTED',
+        '合格': 'PASS',
+        '失敗': 'FAIL',
+        'スキップ': 'SKIP',
+        '対象外': 'NA',
+      }
+      const rawCell = cells[10]?.trim() ?? ''
+      const rawStatus = jaStatusMap[rawCell] ?? rawCell.toUpperCase()
       const validStatuses = ['PASS', 'FAIL', 'SKIP', 'NOT_EXECUTED', 'NA', 'WAITING'] as const
       testCases.push({
         id: cells[0],
